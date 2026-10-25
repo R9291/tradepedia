@@ -12,7 +12,7 @@ import { demoStore } from "@/lib/memory-store";
 import { z } from "zod";
 
 const paystackInitSchema = z.object({
-  amount: z.number().min(100, "Minimum deposit is KES 100").max(500000),
+  amount: z.number().min(1, "Minimum deposit is KES 1").max(500000),
   phoneNumber: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
