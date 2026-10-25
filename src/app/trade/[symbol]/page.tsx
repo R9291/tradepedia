@@ -128,7 +128,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
   // Multiplier / Spot parameters
   const [lotSize, setLotSize] = useState<number>(0.01);
   const [leverage, setLeverage] = useState<number>(500);
-  const [stakePreset, setStakePreset] = useState<number>(250);
+  const [stakePreset, setStakePreset] = useState<number>(50);
   const [stopLoss, setStopLoss] = useState<string>("");
   const [takeProfit, setTakeProfit] = useState<string>("");
   const [useSlTp, setUseSlTp] = useState<boolean>(false);
@@ -136,7 +136,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
   // Digital Options (Rise / Fall) parameters
   const [optionsDuration, setOptionsDuration] = useState<number>(15); // 5s, 15s, 30s, 60s
-  const [optionsStakeKes, setOptionsStakeKes] = useState<number>(1000);
+  const [optionsStakeKes, setOptionsStakeKes] = useState<number>(50);
   const [activeDigitalContracts, setActiveDigitalContracts] = useState<DigitalContract[]>([]);
 
   // Pending limit orders
@@ -606,6 +606,10 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
     const currentMarketStatus = getMarketStatus(symbol);
     if (!currentMarketStatus.isOpen) {
       setErrorMsg(`Market for ${symbol} is currently closed (${currentMarketStatus.tradingHoursLabel}). ${currentMarketStatus.nextEventLabel}. Trade 24/7 Crypto assets.`);
+      return;
+    }
+    if (optionsStakeKes < 50) {
+      setErrorMsg("Minimum contract stake is KES 50.00");
       return;
     }
     if (parseFloat(availableBalance) < optionsStakeKes) {
@@ -1760,7 +1764,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-1">
-                      {[1000, 2500, 5000, 10000, 25000, 50000].map((amt) => (
+                      {[50, 100, 250, 500, 1000, 2500].map((amt) => (
                         <button
                           key={amt}
                           type="button"
@@ -1924,9 +1928,24 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
                   {/* Stake in KES */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-300">Contract Stake (KES)</label>
-                    <div className="grid grid-cols-4 gap-1">
-                      {[500, 1000, 2500, 5000].map((amt) => (
+                    <div className="flex justify-between items-center text-xs">
+                      <label className="font-semibold text-slate-300">Contract Stake (KES)</label>
+                      <span className="text-[10px] text-emerald-400 font-mono">Min KES 50</span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">KES</span>
+                      <input
+                        type="number"
+                        min={50}
+                        step={10}
+                        required
+                        value={optionsStakeKes}
+                        onChange={(e) => setOptionsStakeKes(Math.max(0, Number(e.target.value)))}
+                        className="w-full bg-slate-950 border border-white/[0.1] rounded-lg pl-12 pr-3 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#ff5722]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-5 gap-1 pt-1">
+                      {[50, 100, 250, 500, 1000].map((amt) => (
                         <button
                           key={amt}
                           type="button"
@@ -1934,7 +1953,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                           className={`py-1 rounded text-xs font-mono font-bold border transition-all ${
                             optionsStakeKes === amt
                               ? "bg-[#ff5722] text-white border-[#ff5722]"
-                              : "bg-slate-950 text-slate-400 border-white/[0.06]"
+                              : "bg-slate-950 text-slate-400 border-white/[0.06] hover:bg-slate-900 hover:text-white"
                           }`}
                         >
                           {amt}
