@@ -15,6 +15,7 @@ import {
   Zap,
   Wallet,
   ShieldCheck,
+  ArrowUpRight,
 } from "lucide-react";
 
 export default function DepositPage() {
@@ -307,6 +308,13 @@ export default function DepositPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/withdraw"
+            className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-slate-200 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-all"
+          >
+            <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
+            Withdraw (Preview)
+          </Link>
           <Link
             href="/trade/BTCUSD"
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff5722] to-amber-500 hover:from-[#f4511e] hover:to-amber-400 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-[#ff5722]/20 transition-all"

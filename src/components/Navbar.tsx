@@ -115,6 +115,7 @@ export function Navbar() {
     { name: "Dashboard", href: "/dashboard" },
     { name: "KYC Clearance", href: "/kyc" },
     { name: "M-Pesa Deposit", href: "/deposit" },
+    { name: "Withdraw", href: "/withdraw" },
   ];
 
   const isAdmin = user?.role === "ADMIN" || user?.role === "COMPLIANCE";

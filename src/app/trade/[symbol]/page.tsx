@@ -2977,41 +2977,103 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
         </div>
       )}
 
-      {/* Withdrawal Notice & Compliance Modal */}
+      {/* Withdrawal Pipeline Preview Modal */}
       {isWithdrawalModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-md bg-[#0c0d13] border border-white/[0.1] rounded-2xl p-5 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md bg-[#0a0c14] border border-white/[0.1] rounded-2xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-amber-400" />
-                Withdrawal Notice
-              </h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#ff5722]/15 border border-[#ff5722]/30 flex items-center justify-center text-[#ff5722]">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-1.5">
+                    M-Pesa B2C Withdrawal
+                  </h3>
+                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase">
+                    Upcoming Feature Preview
+                  </span>
+                </div>
+              </div>
               <button
                 onClick={() => setIsWithdrawalModalOpen(false)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
+                className="text-slate-400 hover:text-white text-xl font-bold p-1 cursor-pointer"
               >
                 &times;
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-300">
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>
-                  Withdrawals are not available yet. This feature will be introduced in a future update following full regulatory audit under Kenya CMA Guidelines 2017.
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-mono block">Real Balance Available</span>
+                <span className="text-xl font-black text-white font-mono">
+                  KES {parseFloat(realBalance || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <p>
-                In the sandbox demo mode, paper trading profits are credited to your demo balance. Real M-Pesa automated withdrawals to your personal Safaricom line will be enabled once production B2C payout approval is granted.
-              </p>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                0% Payout Fee
+              </span>
             </div>
 
-            <button
-              onClick={() => setIsWithdrawalModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors"
-            >
-              Understood
-            </button>
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Recipient Safaricom Phone
+                </label>
+                <input
+                  type="tel"
+                  readOnly
+                  value={depositPhone || "07XXXXXXXX"}
+                  className="w-full bg-slate-950 border border-white/[0.08] rounded-lg px-3 py-2 text-slate-200 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Withdrawal Amount (KES)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">KES</span>
+                  <input
+                    type="number"
+                    min={100}
+                    defaultValue={500}
+                    className="w-full bg-slate-950 border border-white/[0.08] rounded-lg pl-12 pr-3 py-2 text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.06] space-y-1.5 text-[11px] text-slate-400 font-mono">
+                <div className="flex justify-between">
+                  <span>Disbursement Speed:</span>
+                  <span className="text-amber-300 font-bold">&lt; 60 seconds (Instant)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Routing Network:</span>
+                  <span className="text-emerald-400 font-bold">Safaricom Daraja B2C</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[11px] text-blue-200 leading-relaxed">
+                ℹ️ <strong>Feature Preview:</strong> Automated M-Pesa disbursements will disburse real funds directly to your phone once the Safaricom B2C shortcode audit completes.
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-white/[0.06]">
+              <Link
+                href="/withdraw"
+                onClick={() => setIsWithdrawalModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#ff5722] to-amber-500 hover:from-[#f4511e] hover:to-amber-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center"
+              >
+                Open Full Withdrawal Hub &rarr;
+              </Link>
+              <button
+                onClick={() => setIsWithdrawalModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white font-bold text-xs transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
