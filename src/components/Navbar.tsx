@@ -106,6 +106,7 @@ export function Navbar() {
 
   const navLinks = [
     { name: "Terminal", href: "/trade/EURUSD" },
+    { name: "Market News", href: "/news" },
     { name: "Markets", href: "/markets" },
     { name: "Analytics", href: "/analytics" },
     { name: "Copy Trading", href: "/copy-trading" },

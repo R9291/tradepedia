@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Clock,
   ChevronDown,
+  ChevronRight,
   ArrowUpRight,
   ArrowDownRight,
   Zap,
@@ -44,6 +45,8 @@ import {
   ExternalLink,
   Shield,
   Globe,
+  Newspaper,
+  BellRing,
 } from "lucide-react";
 import { DerivCandlestickChart } from "@/components/trading/DerivCandlestickChart";
 import { getMarketStatus } from "@/lib/market-hours";
@@ -205,6 +208,11 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
   const [stkStatusMessage, setStkStatusMessage] = useState<string | null>(null);
   const [reconcilingStk, setReconcilingStk] = useState<boolean>(false);
 
+  // Live Market News & Stock Catalyst States
+  const [isNewsModalOpen, setIsNewsModalOpen] = useState<boolean>(false);
+  const [marketNews, setMarketNews] = useState<any[]>([]);
+  const [activeNewsIndex, setActiveNewsIndex] = useState<number>(0);
+
   // User Authentication State (Required before making any deposit or trading Real account)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<{
@@ -345,6 +353,25 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
       window.removeEventListener("storage", handleBalanceEvent);
     };
   }, [accountType]);
+
+  // Real-Time Stock Market News & Catalyst Polling
+  useEffect(() => {
+    fetch("/api/news")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.data?.news) {
+          setMarketNews(data.data.news);
+        }
+      })
+      .catch(() => {});
+
+    // Periodic headline ticker cycle every 8 seconds
+    const newsTimer = setInterval(() => {
+      setActiveNewsIndex((prev) => prev + 1);
+    }, 8000);
+
+    return () => clearInterval(newsTimer);
+  }, []);
 
   // High-Frequency SSE Tick Stream (Every 350ms)
   useEffect(() => {
@@ -1244,6 +1271,21 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
   const marketStatus = getMarketStatus(symbol);
 
+  const currentNewsItem =
+    marketNews.length > 0
+      ? marketNews[activeNewsIndex % marketNews.length]
+      : {
+          id: "news_default",
+          title: "US Federal Reserve Signals Rate Pivot; Wall Street Equities Surge on Lower Yield Outlook",
+          category: "STOCKS",
+          impact: "CRITICAL",
+          affectedMarkets: ["S&P 500", "NASDAQ 100", "Dow Jones", "Tech Equities"],
+          actionableInsight: "Lower benchmark yields decrease borrowing costs, sparking stock market expansion.",
+          timeAgo: "Live",
+          summary: "Federal Reserve signals monetary policy easing, sparking broad-based buying across equity benchmarks.",
+          source: "Tradepedia Institutional Wire",
+        };
+
   return (
     <div className="flex-1 flex flex-col bg-[#050608] text-slate-100 min-h-screen">
       {/* Deriv Top Command Header */}
@@ -1461,6 +1503,16 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
             )}
           </button>
 
+          {/* Stock Market Catalysts & Breaking News Alert Button */}
+          <button
+            onClick={() => setIsNewsModalOpen(true)}
+            className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all relative cursor-pointer"
+            title="Stock Market Breaking News & Catalysts"
+          >
+            <Newspaper className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-ping" />
+          </button>
+
           {/* Withdraw Info Button */}
           <button
             onClick={() => setIsWithdrawalModalOpen(true)}
@@ -1477,6 +1529,43 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
           >
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-[#089981]" /> : <VolumeX className="w-3.5 h-3.5 text-slate-500" />}
           </button>
+        </div>
+      </div>
+
+      {/* Live Market Catalysts & Stock Market Breaking News Alert Ticker */}
+      <div className="bg-gradient-to-r from-red-950/40 via-[#0a0d18] to-amber-950/30 border-b border-red-500/20 px-3 py-1.5 flex items-center justify-between text-xs z-30 shadow-md">
+        <div
+          className="flex items-center gap-2 overflow-hidden flex-1 cursor-pointer group"
+          onClick={() => setIsNewsModalOpen(true)}
+          title="Click to view full stock market catalyst details & trading outlook"
+        >
+          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white flex items-center gap-1 shrink-0 animate-pulse">
+            <Flame className="w-3 h-3 fill-white" />
+            STOCK CATALYST
+          </span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.08] text-amber-300 font-mono font-bold shrink-0 uppercase">
+            {currentNewsItem.category || "STOCKS"}
+          </span>
+          <span className="text-slate-300 font-semibold truncate group-hover:text-amber-300 transition-colors">
+            {currentNewsItem.title}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 pl-2 border-l border-white/[0.08]">
+          <button
+            onClick={() => setIsNewsModalOpen(true)}
+            className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[11px] font-bold flex items-center gap-1 border border-amber-500/30 transition-all cursor-pointer"
+          >
+            <Newspaper className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Impact Analysis</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
+          <Link
+            href="/news"
+            target="_blank"
+            className="hidden md:flex text-slate-400 hover:text-white text-[11px] font-mono items-center gap-1"
+          >
+            News Wire <ExternalLink className="w-2.5 h-2.5" />
+          </Link>
         </div>
       </div>
 
@@ -2945,6 +3034,117 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
         onAddAlert={handleAddAlert}
         onDeleteAlert={handleDeleteAlert}
       />
+
+      {/* Stock Market Catalyst & Breaking News Modal */}
+      {isNewsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-2xl bg-[#090a12] border border-white/[0.1] rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400">
+                  <Flame className="w-4 h-4 fill-red-500 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    Stock Market Catalyst & Intelligence Wire
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    High-impact market drivers, economic releases, and stock valuation catalysts
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsNewsModalOpen(false)}
+                className="text-slate-400 hover:text-white text-xl font-bold p-1 cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Featured Catalyst Flash */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-red-950/40 via-[#0f111c] to-slate-900 border border-red-500/30 space-y-2.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="px-2 py-0.5 rounded-full font-black uppercase bg-red-600 text-white text-[9px] flex items-center gap-1">
+                  <Flame className="w-3 h-3 fill-white" />
+                  HIGH-IMPACT CATALYST
+                </span>
+                <span className="text-slate-400 font-mono">{currentNewsItem.timeAgo}</span>
+              </div>
+              <h4 className="text-base font-extrabold text-white leading-snug">
+                {currentNewsItem.title}
+              </h4>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {currentNewsItem.summary}
+              </p>
+              <div className="p-2.5 rounded-lg bg-black/40 border border-white/[0.06] text-xs text-emerald-400 flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-emerald-300">Stock Market Implication:</strong>{" "}
+                  {currentNewsItem.actionableInsight}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+                <span className="text-[10px] text-slate-400 font-mono uppercase">Impacted Equities:</span>
+                {currentNewsItem.affectedMarkets.map((m: string) => (
+                  <span
+                    key={m}
+                    className="px-2 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] text-amber-300 text-[10px] font-mono font-bold"
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Feed of Other Stock Market Catalysts */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider">
+                <span>Recent High-Impact Headlines</span>
+                <Link
+                  href="/news"
+                  target="_blank"
+                  className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-mono text-[11px]"
+                >
+                  Open Full News Hub &rarr;
+                </Link>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {(marketNews.length > 0 ? marketNews : [currentNewsItem]).map((item: any, idx: number) => (
+                  <div
+                    key={item.id || idx}
+                    className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] transition-all space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-amber-400 font-bold font-mono">{item.category}</span>
+                      <span className="text-slate-500 font-mono">{item.timeAgo}</span>
+                    </div>
+                    <div className="text-xs font-bold text-white hover:text-[#ff5722] transition-colors">
+                      {item.title}
+                    </div>
+                    <div className="text-[11px] text-slate-400 line-clamp-2">
+                      {item.summary}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between text-xs border-t border-white/[0.06]">
+              <span className="text-slate-400 text-[11px]">
+                Powered by Tradepedia Macro Wire
+              </span>
+              <button
+                onClick={() => setIsNewsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold text-xs transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TradingView Style: Select Broker & Account Manager Modal */}
       {isAccountModalOpen && (
