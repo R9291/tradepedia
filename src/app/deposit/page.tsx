@@ -347,7 +347,7 @@ export default function DepositPage() {
                   <label className="block text-xs font-semibold text-slate-300">
                     Deposit Amount (KES)
                   </label>
-                  <span className="text-[11px] text-emerald-400 font-mono">Min KES 100</span>
+                  <span className="text-[11px] text-emerald-400 font-mono">Min KES 1</span>
                 </div>
                 <div className="relative">
                   <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-500">
@@ -355,9 +355,9 @@ export default function DepositPage() {
                   </span>
                   <input
                     type="number"
-                    min={100}
+                    min={1}
                     max={150000}
-                    step={50}
+                    step={1}
                     required
                     value={amount}
                     onChange={(e) => setAmount(Number(e.target.value))}
@@ -367,7 +367,7 @@ export default function DepositPage() {
 
                 {/* Quick Amount Chips */}
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-2">
-                  {[100, 250, 500, 1000, 2500, 5000].map((preset) => (
+                  {[10, 50, 100, 500, 1000, 5000].map((preset) => (
                     <button
                       key={preset}
                       type="button"
@@ -393,7 +393,7 @@ export default function DepositPage() {
                   <input
                     type="tel"
                     required
-                    placeholder="254712345678"
+                    placeholder="07XXXXXXXX or 2547XXXXXXXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-3.5 py-2.5 text-sm text-slate-100 font-mono focus:outline-none focus:border-[#ff5722]"
