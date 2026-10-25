@@ -317,13 +317,7 @@ export default function DepositPage() {
         </div>
       </div>
 
-      {/* Mandatory Risk Warning */}
-      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
-        <div>
-          <strong>Risk Warning:</strong> Trading involves substantial risk of loss. Do not deposit money you cannot afford to lose. All funds deposited are utilized solely as margin collateral.
-        </div>
-      </div>
+
 
       {/* Authentication Notice if Guest */}
       {!isAuthenticated && (
