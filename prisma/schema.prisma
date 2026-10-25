@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  COMPLIANCE
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DepositStatus {
+  INITIATED
+  PENDING_CONFIRMATION
+  SUCCESSFUL
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+  REJECTED
+}
+
+enum TradeDirection {
+  BUY
+  SELL
+}
+
+enum LedgerEntryType {
+  DEPOSIT
+  TRADE_OPEN_MARGIN_HOLD
+  TRADE_CLOSE_MARGIN_RELEASE
+  TRADE_PROFIT
+  TRADE_LOSS
+  FEE
+  ADJUSTMENT
+  WITHDRAWAL // Reserved for future withdrawal module; not exposed in V1 UI
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  phone         String        @unique
+  passwordHash  String
+  fullName      String
+  role          UserRole      @default(USER)
+  kycStatus     KycStatus     @default(NOT_SUBMITTED)
+  isActive      Boolean       @default(true)
+  emailVerified Boolean       @default(false)
+  phoneVerified Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  accounts      Account[]
+  deposits      Deposit[]
+  trades        Trade[]
+  ledgerEntries LedgerEntry[]
+  kycDocuments  KycDocument[]
+}
+
+model Account {
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency         String        @default("KES")
+  availableBalance Decimal       @default(0) @db.Decimal(18, 2)
+  lockedMargin     Decimal       @default(0) @db.Decimal(18, 2)
+  equity           Decimal       @default(0) @db.Decimal(18, 2)
+  isDemo           Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  trades           Trade[]
+  ledgerEntries    LedgerEntry[]
+}
+
+model KycDocument {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType String    // e.g. "NATIONAL_ID", "PASSPORT", "PROOF_OF_ADDRESS", "SELFIE"
+  fileUrl      String
+  idNumber     String?
+  address      String?
+  nationality  String?
+  dateOfBirth  DateTime?
+  status       KycStatus @default(PENDING)
+  reviewerNote String?
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+model Deposit {
+  id                 String         @id @default(cuid())
+  userId             String
+  user               User           @relation(fields: [userId], references: [id])
+  accountId          String
+  amount             Decimal        @db.Decimal(18, 2)
+  currency           String         @default("KES")
+  phoneNumber        String
+  status             DepositStatus  @default(INITIATED)
+  provider           String         @default("MPESA")
+  merchantRequestId  String?
+  checkoutRequestId  String?        @unique
+  mpesaReceiptNumber String?        @unique
+  failureReason      String?
+  callbackPayload    Json?
+  initiatedAt        DateTime       @default(now())
+  completedAt        DateTime?
+
+  ledgerEntries      LedgerEntry[]
+}
+
+model Instrument {
+  id            String      @id @default(cuid())
+  symbol        String      @unique
+  baseCurrency  String
+  quoteCurrency String
+  displayName   String
+  pipSize       Decimal     @db.Decimal(18, 8)
+  contractSize  Decimal     @db.Decimal(18, 8)
+  maxLeverage   Int         @default(10)
+  isActive      Boolean     @default(true)
+
+  trades        Trade[]
+  priceTicks    PriceTick[]
+}
+
+model PriceTick {
+  id           String     @id @default(cuid())
+  instrumentId String
+  bid          Decimal    @db.Decimal(18, 8)
+  ask          Decimal    @db.Decimal(18, 8)
+  mid          Decimal    @db.Decimal(18, 8)
+  source       String
+  receivedAt   DateTime   @default(now())
+
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+}
+
+model Trade {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  accountId      String
+  account        Account        @relation(fields: [accountId], references: [id])
+  instrumentId   String
+  instrument     Instrument     @relation(fields: [instrumentId], references: [id])
+  direction      TradeDirection
+  lotSize        Decimal        @db.Decimal(18, 4)
+  entryPrice     Decimal        @db.Decimal(18, 8)
+  exitPrice      Decimal?       @db.Decimal(18, 8)
+  stopLoss       Decimal?       @db.Decimal(18, 8)
+  takeProfit     Decimal?       @db.Decimal(18, 8)
+  marginRequired Decimal        @db.Decimal(18, 2)
+  pnl            Decimal?       @db.Decimal(18, 2)
+  status         TradeStatus    @default(OPEN)
+  openedAt       DateTime       @default(now())
+  closedAt       DateTime?
+
+  ledgerEntries  LedgerEntry[]
+}
+
+model LedgerEntry {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  accountId     String
+  account       Account         @relation(fields: [accountId], references: [id])
+  type          LedgerEntryType
+  amount        Decimal         @db.Decimal(18, 2)
+  balanceAfter  Decimal         @db.Decimal(18, 2)
+  referenceType String?         // "DEPOSIT", "TRADE", "ADJUSTMENT"
+  referenceId   String?
+  description   String
+  createdAt     DateTime        @default(now())
+
+  depositId     String?
+  deposit       Deposit?        @relation(fields: [depositId], references: [id])
+  tradeId       String?
+  trade         Trade?          @relation(fields: [tradeId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
