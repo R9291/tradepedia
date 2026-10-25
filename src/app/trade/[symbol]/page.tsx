@@ -2666,6 +2666,19 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                   </button>
                 </form>
 
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAuthenticated(true);
+                      setAuthError(null);
+                    }}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold underline underline-offset-4"
+                  >
+                    Or skip and deposit directly via M-Pesa Express &rarr;
+                  </button>
+                </div>
+
                 <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-slate-400">
                   <span>Prefer full-screen pages?</span>
                   <div className="flex items-center gap-3">

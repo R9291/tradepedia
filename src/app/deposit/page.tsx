@@ -111,7 +111,6 @@ export default function DepositPage() {
 
   const handleInitiateDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (kycStatus !== "APPROVED") return;
 
     setSubmitting(true);
     setDepositState({
@@ -239,53 +238,21 @@ export default function DepositPage() {
         </div>
       </div>
 
-      {/* Authentication Gate Notice: Require Login or Registration before Deposit */}
-      {!isAuthenticated ? (
-        <div className="p-6 rounded-2xl bg-[#090a10] border border-amber-500/30 space-y-4 text-center shadow-2xl">
-          <ShieldAlert className="w-10 h-10 text-amber-400 mx-auto" />
-          <div>
-            <h2 className="text-base font-bold text-white">Login or Registration Required to Deposit</h2>
-            <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
-              You must sign in to your account or register a new account before making any Real Broker deposit. Paper Trading (Demo) remains available without an account.
-            </p>
+      {/* Authentication Notice if Guest */}
+      {!isAuthenticated && (
+        <div className="p-4 rounded-xl bg-slate-900 border border-white/[0.08] text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-slate-300">
+            <Info className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>You can test deposits directly or sign in to link payments to your trader profile.</span>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors"
-            >
-              Log In to Account
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#ff5722] to-amber-600 hover:from-[#f4511e] hover:to-amber-500 text-white font-bold text-xs transition-colors"
-            >
-              Create New Account
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      ) : !isKycApproved ? (
-        <div className="p-6 rounded-xl bg-slate-900 border border-red-500/30 space-y-4 text-center">
-          <ShieldAlert className="w-10 h-10 text-red-400 mx-auto" />
-          <div>
-            <h2 className="text-base font-bold text-white">Deposits Blocked: KYC Not Approved</h2>
-            <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
-              Under Kenyan Capital Markets & AML regulations, deposits cannot be accepted until your identity documents have been verified and approved.
-            </p>
-          </div>
-          <Link
-            href="/kyc"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors"
-          >
-            Go to KYC Verification
-            <ArrowRight className="w-4 h-4" />
+          <Link href="/login" className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-semibold text-xs shrink-0">
+            Sign In
           </Link>
         </div>
-      ) : (
-        /* Deposit Execution Form */
-        <div className="bg-[#090a10] border border-white/[0.08] rounded-2xl p-6 space-y-5 shadow-2xl">
+      )}
+
+      {/* Deposit Execution Form */}
+      <div className="bg-[#090a10] border border-white/[0.08] rounded-2xl p-6 space-y-5 shadow-2xl">
           <div className="flex items-center justify-between text-xs border-b border-white/[0.06] pb-3">
             <span className="text-slate-400">Deposit Limits:</span>
             <span className="font-semibold text-slate-200">
@@ -513,7 +480,6 @@ export default function DepositPage() {
             *Never disclose your M-Pesa PIN. TRADEPEDIA never asks for, records, or stores user PINs.
           </div>
         </div>
-      )}
 
       {/* User Deposit History Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden space-y-4">
