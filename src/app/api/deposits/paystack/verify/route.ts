@@ -41,34 +41,24 @@ export async function POST(req: NextRequest) {
 
     const { reference } = validated.data;
 
-    // 1. Prevent duplicate crediting of the same Paystack reference
+    // 1. Prevent duplicate crediting of the same reference
     const existingMem = (demoStore.deposits || []).find(
       (d) => d.status === "SUCCESSFUL" && (d.checkoutRequestId === reference || d.mpesaReceiptNumber === reference)
     );
     if (existingMem) {
-      // Already confirmed (e.g. by the gateway callback). Report success without crediting twice.
-      if (existingMem.userId === user.id) {
-        const memUserDone = demoStore.users.get(user.id) || demoStore.users.get(user.email);
-        const realAccDone = memUserDone?.accounts.find((a) => !a.isDemo);
-        return NextResponse.json({
-          success: true,
-          message: "M-Pesa payment already confirmed and credited.",
-          data: {
-            reference,
-            receipt: existingMem.mpesaReceiptNumber,
-            amount: parseFloat(existingMem.amount),
-            newRealBalance: realAccDone?.availableBalance || existingMem.amount,
-            status: "SUCCESSFUL",
-          },
-        });
-      }
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Transaction reference ${reference} has already been verified and credited.`,
+      const memUserDone = demoStore.users.get(user.id) || demoStore.users.get(user.email);
+      const realAccDone = memUserDone?.accounts?.find((a) => !a.isDemo);
+      return NextResponse.json({
+        success: true,
+        message: "Payment to TRADEPEDIA already confirmed and credited.",
+        data: {
+          reference,
+          receipt: existingMem.mpesaReceiptNumber,
+          amount: parseFloat(existingMem.amount),
+          newRealBalance: realAccDone?.availableBalance || existingMem.amount,
+          status: "SUCCESSFUL",
         },
-        { status: 409 }
-      );
+      });
     }
 
     // LIVE MODE: refuse to credit Real accounts from sandbox / test-mode references
@@ -126,18 +116,37 @@ export async function POST(req: NextRequest) {
       // Verify live against Safaricom Daraja STK Push Query API
       const darajaStatus = await queryStkPushStatus(reference);
       if (darajaStatus.resultCode !== "0") {
+        if (
+          darajaStatus.resultCode === "1032" ||
+          darajaStatus.resultDesc?.toLowerCase().includes("cancel")
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "M-Pesa payment prompt was cancelled on your phone.",
+              data: {
+                status: "CANCELLED",
+                reference,
+                resultCode: darajaStatus.resultCode,
+              },
+            },
+            { status: 200 }
+          );
+        }
+
         return NextResponse.json(
           {
             success: false,
-            error: `M-Pesa STK Push is not completed yet (${
-              darajaStatus.resultDesc || "Waiting for you to enter your M-Pesa PIN on your phone"
-            }).`,
+            error:
+              darajaStatus.resultDesc ||
+              "Waiting for you to enter your M-Pesa PIN on your phone",
             data: {
               status: "PENDING",
               reference,
+              resultCode: darajaStatus.resultCode,
             },
           },
-          { status: 400 }
+          { status: 200 }
         );
       }
 
@@ -160,11 +169,11 @@ export async function POST(req: NextRequest) {
               verification.gatewayResponse || "Waiting for M-Pesa PIN confirmation"
             }).`,
             data: {
-              status: verification.status,
+              status: "PENDING",
               reference: verification.reference,
             },
           },
-          { status: 400 }
+          { status: 200 }
         );
       }
 

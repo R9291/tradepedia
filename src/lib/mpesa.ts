@@ -155,11 +155,14 @@ export async function initiateStkPush(params: StkPushParams): Promise<StkPushRes
   const rawCallbackUrl =
     readEnvFromDisk("MPESA_CALLBACK_URL") ||
     process.env.MPESA_CALLBACK_URL ||
-    "https://tradepedia.co.ke/api/deposits/mpesa/callback";
-  // Safaricom Daraja rejects http://localhost callback URLs; automatically upgrade to valid HTTPS endpoint
+    "https://tradepedia-opal.vercel.app/api/deposits/mpesa/callback";
+  // Safaricom Daraja rejects http://localhost callback URLs and dead tunnels; automatically upgrade to live production endpoint
   const callbackUrl =
-    rawCallbackUrl.includes("localhost") || rawCallbackUrl.includes("127.0.0.1") || rawCallbackUrl.startsWith("http://")
-      ? "https://tradepedia.co.ke/api/deposits/mpesa/callback"
+    rawCallbackUrl.includes("localhost") ||
+    rawCallbackUrl.includes("127.0.0.1") ||
+    rawCallbackUrl.includes(".lhr.life") ||
+    rawCallbackUrl.startsWith("http://")
+      ? "https://tradepedia-opal.vercel.app/api/deposits/mpesa/callback"
       : rawCallbackUrl;
   const transactionType =
     readEnvFromDisk("MPESA_TRANSACTION_TYPE") ||

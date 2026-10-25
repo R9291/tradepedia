@@ -804,6 +804,26 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
     }
   };
 
+  // Automated Polling for Quick Deposit M-Pesa Confirmation
+  useEffect(() => {
+    if (!pendingStkCheckoutId) return;
+
+    let isPolling = false;
+    const interval = setInterval(async () => {
+      if (isPolling) return;
+      isPolling = true;
+      try {
+        await handleReconcileStk(pendingStkCheckoutId);
+      } catch (e) {
+        console.error("Terminal STK polling error:", e);
+      } finally {
+        isPolling = false;
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [pendingStkCheckoutId, depositAmount, realBalance]);
+
   // Launch Official Paystack Kenya Inline Checkout Popup (M-Pesa Express, Airtel Money, Card, Bank)
   const handlePaystackCheckout = async () => {
     setDepositing(true);

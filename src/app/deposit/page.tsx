@@ -124,44 +124,58 @@ export default function DepositPage() {
     };
   }, []);
 
-  // Polling for active deposit status
+  // Automated Live Polling for M-Pesa STK Push Confirmation
   useEffect(() => {
-    if (!activeDepositId || depositState.status === "SUCCESS" || depositState.status === "FAILED") {
+    const refToPoll = depositState.checkoutRequestId;
+    if (!refToPoll || depositState.status !== "WAITING_CALLBACK") {
       return;
     }
 
+    let isPolling = false;
     const interval = setInterval(async () => {
+      if (isPolling) return;
+      isPolling = true;
       try {
-        const res = await fetch(`/api/deposits/${activeDepositId}`);
+        const res = await fetch("/api/deposits/paystack/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reference: refToPoll,
+            depositId: activeDepositId || undefined,
+            amount,
+          }),
+        });
+
         if (!res.ok) return;
         const data = await res.json();
-        const dep = data?.data?.deposit;
 
-        if (dep?.status === "SUCCESSFUL") {
-          const credited = parseFloat(dep.amount) || amount;
+        if (data?.data?.status === "SUCCESSFUL") {
+          const credited = data.data?.amount ? parseFloat(data.data.amount) : amount;
           tallyBalance(credited);
           setDepositState({
             status: "SUCCESS",
-            receipt: dep.mpesaReceiptNumber,
-            message: `Payment of KES ${credited.toLocaleString()} to TRADEPEDIA confirmed! M-Pesa Receipt: ${dep.mpesaReceiptNumber}. Your TRADEPEDIA Real Broker account balance has been credited.`,
+            receipt: data.data.receipt,
+            message: `Payment of KES ${credited.toLocaleString()} to TRADEPEDIA confirmed! Receipt: ${data.data.receipt}. Your TRADEPEDIA Real Broker account balance has been credited.`,
           });
           clearInterval(interval);
           loadData();
-        } else if (dep?.status === "FAILED" || dep?.status === "CANCELLED") {
+        } else if (data?.data?.status === "CANCELLED" || data?.data?.status === "FAILED") {
           setDepositState({
             status: "FAILED",
-            message: dep.failureReason || `M-Pesa payment ${dep.status.toLowerCase()}`,
+            message: data.error || "M-Pesa payment prompt was cancelled on your phone.",
           });
           clearInterval(interval);
           loadData();
         }
       } catch (e) {
-        console.error(e);
+        console.error("Auto polling verify error:", e);
+      } finally {
+        isPolling = false;
       }
-    }, 3000);
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [activeDepositId, depositState.status, amount]);
+  }, [depositState.checkoutRequestId, depositState.status, activeDepositId, amount]);
 
   const handleInitiateDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,7 +227,7 @@ export default function DepositPage() {
         checkoutRequestId: ref,
         message:
           data.data?.displayText ||
-          "M-Pesa PIN prompt sent to your phone. Enter your M-Pesa PIN on your device, then click Check Confirmation.",
+          "M-Pesa PIN prompt sent to your phone. Enter your PIN on your phone to approve — your balance will update automatically!",
       });
 
       await loadData();
@@ -303,17 +317,6 @@ export default function DepositPage() {
         </div>
       </div>
 
-      {/* Mandatory Withdrawal Notice */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-slate-700/80 text-xs space-y-2">
-        <div className="flex items-center gap-2 font-bold text-amber-400">
-          <Info className="w-4 h-4 shrink-0" />
-          <span>Withdrawals Notice</span>
-        </div>
-        <p className="text-slate-300 font-medium">
-          Withdrawals are not available yet. This feature will be introduced in a future update.
-        </p>
-      </div>
-
       {/* Mandatory Risk Warning */}
       <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
@@ -369,12 +372,18 @@ export default function DepositPage() {
               </div>
 
               {depositState.status === "WAITING_CALLBACK" && (
-                <button
-                  onClick={handleManualReconcile}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 rounded border border-amber-500/40 text-[11px]"
-                >
-                  <RefreshCw className="w-3 h-3" /> Check Confirmation
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-300 rounded border border-amber-500/30 text-[11px] font-mono">
+                    <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
+                    Listening for PIN...
+                  </span>
+                  <button
+                    onClick={handleManualReconcile}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 rounded border border-amber-500/40 text-[11px]"
+                  >
+                    Check Now
+                  </button>
+                </div>
               )}
             </div>
 
