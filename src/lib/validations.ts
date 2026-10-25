@@ -51,7 +51,7 @@ export const adminAdjustmentSchema = z.object({
 export const depositInitiateSchema = z.object({
   amount: z
     .number()
-    .min(1, "Minimum deposit amount is KES 1.00")
+    .min(100, "Minimum deposit amount is KES 100.00")
     .max(150000, "Maximum single deposit amount is KES 150,000.00"),
   phoneNumber: z
     .string()
