@@ -504,7 +504,7 @@ export default function DepositPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[540px] text-left text-xs">
               <thead className="bg-slate-950/60 text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="px-6 py-3">Timestamp</th>

@@ -1533,30 +1533,32 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
       </div>
 
       {/* Live Market Catalysts & Stock Market Breaking News Alert Ticker */}
-      <div className="bg-gradient-to-r from-red-950/40 via-[#0a0d18] to-amber-950/30 border-b border-red-500/20 px-3 py-1.5 flex items-center justify-between text-xs z-30 shadow-md">
+      <div className="bg-gradient-to-r from-red-950/40 via-[#0a0d18] to-amber-950/30 border-b border-red-500/20 px-2 sm:px-3 py-1.5 flex items-center justify-between text-xs z-30 shadow-md gap-2">
         <div
-          className="flex items-center gap-2 overflow-hidden flex-1 cursor-pointer group"
+          className="flex items-center gap-1.5 sm:gap-2 overflow-hidden min-w-0 flex-1 cursor-pointer group"
           onClick={() => setIsNewsModalOpen(true)}
           title="Click to view full stock market catalyst details & trading outlook"
         >
-          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white flex items-center gap-1 shrink-0 animate-pulse">
-            <Flame className="w-3 h-3 fill-white" />
-            STOCK CATALYST
+          <span className="px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-black uppercase bg-red-600 text-white flex items-center gap-1 shrink-0 animate-pulse">
+            <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-white" />
+            <span className="hidden xs:inline">STOCK CATALYST</span>
+            <span className="xs:hidden">NEWS</span>
           </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.08] text-amber-300 font-mono font-bold shrink-0 uppercase">
+          <span className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-white/[0.08] text-amber-300 font-mono font-bold shrink-0 uppercase hidden sm:inline">
             {currentNewsItem.category || "STOCKS"}
           </span>
-          <span className="text-slate-300 font-semibold truncate group-hover:text-amber-300 transition-colors">
+          <span className="text-slate-300 font-semibold truncate text-[11px] sm:text-xs group-hover:text-amber-300 transition-colors">
             {currentNewsItem.title}
           </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0 pl-2 border-l border-white/[0.08]">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-1.5 sm:pl-2 border-l border-white/[0.08]">
           <button
             onClick={() => setIsNewsModalOpen(true)}
-            className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[11px] font-bold flex items-center gap-1 border border-amber-500/30 transition-all cursor-pointer"
+            className="px-2 sm:px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 border border-amber-500/30 transition-all cursor-pointer whitespace-nowrap"
           >
-            <Newspaper className="w-3.5 h-3.5 text-amber-400" />
+            <Newspaper className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
             <span className="hidden sm:inline">Impact Analysis</span>
+            <span className="sm:hidden">Impact</span>
             <ChevronRight className="w-3 h-3" />
           </button>
           <Link
@@ -1606,9 +1608,9 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
       )}
 
       {/* Main Trading Floor Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 w-full">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 p-2 sm:p-3 w-full">
         {/* Left Column: Interactive Pure Candlestick Chart (Deriv Engine) */}
-        <div className="lg:col-span-8 xl:col-span-9 flex flex-col h-[340px] sm:h-[460px] lg:h-[640px]">
+        <div className="lg:col-span-8 xl:col-span-9 flex flex-col h-[360px] sm:h-[480px] lg:h-[calc(100vh-210px)] min-h-[500px]">
           <DerivCandlestickChart
             symbol={symbol}
             currentBid={bid}
@@ -1624,7 +1626,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
         </div>
 
         {/* Right Column: Order Execution Ticket, Order Book & Market Tape */}
-        <div className="lg:col-span-4 xl:col-span-3 flex flex-col bg-[#0a0b10] border border-white/[0.08] rounded-2xl p-4 space-y-3.5 shadow-2xl relative overflow-hidden">
+        <div className="lg:col-span-4 xl:col-span-3 flex flex-col bg-[#0a0b10] border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-2xl relative overflow-hidden lg:max-h-[calc(100vh-210px)] lg:overflow-y-auto">
           {/* Subtle fiery glow top accent */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff5722]/10 blur-3xl pointer-events-none" />
 
@@ -2315,7 +2317,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
         {/* Tab Content 1: Open Positions */}
         {bottomTab === "POSITIONS" && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
             {openTradesForCurrentAccount.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-500 space-y-2">
                 <div className="font-semibold text-slate-400">
@@ -2330,7 +2332,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                 </div>
               </div>
             ) : (
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full min-w-[700px] text-left text-xs font-mono">
                 <thead>
                   <tr className="text-slate-500 border-b border-white/[0.04]">
                     <th className="pb-2 font-medium">Symbol</th>
@@ -2390,14 +2392,14 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
         {/* Tab Content 2: Pending Limit Orders */}
         {bottomTab === "PENDING" && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
             {pendingOrdersForCurrentAccount.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-500 space-y-1">
                 <div>No pending limit orders in {accountType === "DEMO" ? "Paper Trading" : "Live Real"} account.</div>
                 <div className="text-[11px] text-slate-600">Switch to &quot;Pending Limit&quot; in the ticket above to set target trigger rates.</div>
               </div>
             ) : (
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full min-w-[650px] text-left text-xs font-mono">
                 <thead>
                   <tr className="text-slate-500 border-b border-white/[0.04]">
                     <th className="pb-2">Symbol</th>
@@ -2444,14 +2446,14 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
         {/* Tab Content 3: Active Digital Options Contracts */}
         {bottomTab === "OPTIONS" && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
             {activeDigitalContractsForCurrentAccount.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-500 space-y-1">
                 <div>No active digital contracts in {accountType === "DEMO" ? "Paper Trading" : "Live Real"} account.</div>
                 <div className="text-[11px] text-slate-600">Select &quot;Rise / Fall&quot; above to trade high-yield digital options contracts.</div>
               </div>
             ) : (
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full min-w-[650px] text-left text-xs font-mono">
                 <thead>
                   <tr className="text-slate-500 border-b border-white/[0.04]">
                     <th className="pb-2">Symbol</th>
@@ -2501,14 +2503,14 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
         {/* Tab Content 4: Trade History */}
         {bottomTab === "HISTORY" && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
             {closedTradesForCurrentAccount.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-500 space-y-1">
                 <div>No closed trades found for {accountType === "DEMO" ? "Paper Trading" : "Live Real"} account.</div>
                 <div className="text-[11px] text-slate-600">Positions closed during trading will be archived here in your permanent audit journal.</div>
               </div>
             ) : (
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full min-w-[650px] text-left text-xs font-mono">
                 <thead>
                   <tr className="text-slate-500 border-b border-white/[0.04]">
                     <th className="pb-2 font-medium">Symbol</th>
