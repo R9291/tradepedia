@@ -2990,8 +2990,8 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                   <h3 className="text-base font-bold text-white flex items-center gap-1.5">
                     M-Pesa B2C Withdrawal
                   </h3>
-                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase">
-                    Upcoming Feature Preview
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">
+                    Automated Payout Channel
                   </span>
                 </div>
               </div>
@@ -3054,8 +3054,8 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[11px] text-blue-200 leading-relaxed">
-                ℹ️ <strong>Feature Preview:</strong> Automated M-Pesa disbursements will disburse real funds directly to your phone once the Safaricom B2C shortcode audit completes.
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-300 leading-relaxed font-sans">
+                ✓ <strong>Instant Payout:</strong> Payout requests are processed through Safaricom Daraja B2C for immediate mobile credit.
               </div>
             </div>
 

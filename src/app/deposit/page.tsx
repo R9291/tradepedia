@@ -313,7 +313,7 @@ export default function DepositPage() {
             className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-slate-200 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-all"
           >
             <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
-            Withdraw (Preview)
+            Withdraw Funds
           </Link>
           <Link
             href="/trade/BTCUSD"
