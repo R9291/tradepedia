@@ -38,6 +38,46 @@ export function Navbar() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [realBalance, setRealBalance] = useState<number>(0);
+
+  useEffect(() => {
+    // Initial fetch from localStorage or account summary
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("tradepedia_real_balance");
+      if (saved) setRealBalance(parseFloat(saved));
+    }
+    fetch("/api/account/summary")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res?.data?.realAccount?.availableBalance) {
+          const serverBal = parseFloat(res.data.realAccount.availableBalance);
+          const localBal = parseFloat(
+            (typeof window !== "undefined" && localStorage.getItem("tradepedia_real_balance")) || "0"
+          );
+          const best = Math.max(serverBal, localBal);
+          setRealBalance(best);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("tradepedia_real_balance", best.toFixed(2));
+          }
+        }
+      })
+      .catch(() => {});
+
+    const onBalanceUpdate = (e: any) => {
+      if (e.detail?.balance !== undefined) {
+        setRealBalance(Number(e.detail.balance));
+      } else if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("tradepedia_real_balance");
+        if (saved) setRealBalance(parseFloat(saved));
+      }
+    };
+    window.addEventListener("tradepedia_balance_updated", onBalanceUpdate);
+    window.addEventListener("storage", onBalanceUpdate);
+    return () => {
+      window.removeEventListener("tradepedia_balance_updated", onBalanceUpdate);
+      window.removeEventListener("storage", onBalanceUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -145,6 +185,23 @@ export function Navbar() {
 
         {/* Right Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Live Real Balance Pill */}
+          <Link
+            href="/deposit"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 transition-all text-xs"
+            title="TRADEPEDIA Real Balance - Tap to Deposit"
+          >
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <div className="flex items-center gap-1 font-mono">
+              <span className="text-[10px] text-emerald-400/80 uppercase font-semibold">Real:</span>
+              <span className="font-bold text-emerald-300">
+                KES {realBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase">
+              + Deposit
+            </span>
+          </Link>
           {user ? (
             <div className="flex items-center gap-2">
               <Link

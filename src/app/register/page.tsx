@@ -39,8 +39,7 @@ export default function RegisterPage() {
       }
 
       // Successful registration: redirect to trading terminal
-      router.push("/trade/EURUSD");
-      router.refresh();
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message);
     } finally {

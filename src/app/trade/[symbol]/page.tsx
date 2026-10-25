@@ -285,7 +285,15 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
           setKycStatus(sumData.data.compliance.kycStatus);
           const demoBal = sumData.data.demoAccount?.availableBalance || "100000.00";
-          const realBal = sumData.data.realAccount?.availableBalance || "0.00";
+          const serverReal = parseFloat(sumData.data.realAccount?.availableBalance || "0");
+          const localReal = parseFloat(
+            (typeof window !== "undefined" && localStorage.getItem("tradepedia_real_balance")) || "0"
+          );
+          const resolvedReal = Math.max(serverReal, localReal).toFixed(2);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("tradepedia_real_balance", resolvedReal);
+          }
+          const realBal = resolvedReal;
           setDemoBalance(demoBal);
           setRealBalance(realBal);
 
@@ -319,7 +327,24 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
   useEffect(() => {
     loadAccountAndTrades();
-  }, []);
+
+    const handleBalanceEvent = (e: any) => {
+      if (e.detail?.balance !== undefined) {
+        const b = Number(e.detail.balance).toFixed(2);
+        setRealBalance(b);
+        if (accountType === "REAL") {
+          setAvailableBalance(b);
+          setEquity(b);
+        }
+      }
+    };
+    window.addEventListener("tradepedia_balance_updated", handleBalanceEvent);
+    window.addEventListener("storage", handleBalanceEvent);
+    return () => {
+      window.removeEventListener("tradepedia_balance_updated", handleBalanceEvent);
+      window.removeEventListener("storage", handleBalanceEvent);
+    };
+  }, [accountType]);
 
   // High-Frequency SSE Tick Stream (Every 350ms)
   useEffect(() => {
@@ -757,8 +782,14 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
         setAccountType("REAL");
         setAvailableBalance(newBal);
         setEquity(newBal);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("tradepedia_real_balance", newBal);
+          window.dispatchEvent(
+            new CustomEvent("tradepedia_balance_updated", { detail: { balance: parseFloat(newBal) } })
+          );
+        }
         setSuccessMsg(
-          `✓ M-Pesa Deposit Confirmed! KES ${depositAmount.toLocaleString()} credited to your Real Broker account (Receipt: ${data.data.receipt}).`
+          `✓ Payment to TRADEPEDIA Confirmed! KES ${depositAmount.toLocaleString()} credited to your Real Broker account (Receipt: ${data.data.receipt}).`
         );
         setPendingStkDepositId(null);
         setPendingStkCheckoutId(null);

@@ -164,6 +164,8 @@ export async function POST(req: NextRequest) {
       email: user.email,
       role: user.role,
       fullName: user.fullName,
+      phone: user.phone,
+      kycStatus: user.kycStatus,
     });
 
     await createAuditLog({

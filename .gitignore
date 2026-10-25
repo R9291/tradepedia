@@ -37,3 +37,7 @@ yarn-error.log*
 
 # uploads
 /uploads
+
+# tunnels & logs
+tunnel_*.log
+live_url.txt
