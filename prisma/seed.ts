@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, KycStatus, LedgerEntryType } from "@prisma/client";
+import { PrismaClient, UserRole, KycStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -98,10 +98,10 @@ async function main() {
       phoneVerified: true,
       accounts: {
         create: {
-          currency: "KES",
-          availableBalance: 1000000.0,
+          currency: "USD",
+          availableBalance: 10000.0,
           lockedMargin: 0.0,
-          equity: 1000000.0,
+          equity: 10000.0,
           isDemo: true,
         },
       },
