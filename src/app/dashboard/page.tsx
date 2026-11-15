@@ -195,10 +195,10 @@ export default function DashboardPage() {
             <Wallet className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-extrabold text-white">
-            KES {parseFloat(activeAcc.availableBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${parseFloat(activeAcc.availableBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
           <div className={`text-[10px] font-semibold ${accountMode === "REAL" ? "text-emerald-400" : "text-amber-400"}`}>
-            {accountMode === "REAL" ? "Real Money Cash Capital" : "Simulated Paper Capital"}
+            {accountMode === "REAL" ? "Real Money Cash Capital (USD)" : "Simulated Paper Capital (USD)"}
           </div>
         </div>
 
@@ -209,7 +209,7 @@ export default function DashboardPage() {
             <Activity className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-2xl font-extrabold text-white">
-            KES {parseFloat(activeAcc.equity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${parseFloat(activeAcc.equity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[10px] text-slate-400">Balance + Floating PnL</div>
         </div>
@@ -221,7 +221,7 @@ export default function DashboardPage() {
             <Layers className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-2xl font-extrabold text-white">
-            KES {parseFloat(activeAcc.lockedMargin).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${parseFloat(activeAcc.lockedMargin).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[10px] text-slate-400">Collateral held for open orders</div>
         </div>
@@ -256,7 +256,7 @@ export default function DashboardPage() {
                 M-Pesa Deposit
               </div>
               <div className="text-[11px] text-slate-400">
-                Instant Daraja STK Push into trading account
+                Instant Daraja STK Push into USD trading account
               </div>
             </div>
           </div>
@@ -328,7 +328,7 @@ export default function DashboardPage() {
                   <th className="px-6 py-3">Timestamp</th>
                   <th className="px-6 py-3">Type</th>
                   <th className="px-6 py-3">Description</th>
-                  <th className="px-6 py-3 text-right">Amount (KES)</th>
+                  <th className="px-6 py-3 text-right">Amount (USD)</th>
                   <th className="px-6 py-3 text-right">Balance After</th>
                 </tr>
               </thead>
@@ -357,7 +357,7 @@ export default function DashboardPage() {
                         })}
                       </td>
                       <td className="px-6 py-3 text-right font-mono text-slate-300 whitespace-nowrap">
-                        KES{" "}
+                        $
                         {parseFloat(tx.balanceAfter).toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                         })}
