@@ -3,6 +3,7 @@ import { getCurrentUserFromRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { depositInitiateSchema } from "@/lib/validations";
 import { initiateStkPush, formatKenyanPhoneNumber } from "@/lib/mpesa";
+import { getUsdToKesRate, convertUsdToKes } from "@/lib/fx";
 import { createAuditLog } from "@/lib/audit";
 import { demoStore } from "@/lib/memory-store";
 import { DepositStatus } from "@prisma/client";
@@ -35,16 +36,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { amount, phoneNumber } = validated.data;
+    const { amount, phoneNumber } = validated.data; // amount is in USD
     const formattedPhone = formatKenyanPhoneNumber(phoneNumber);
     const depositId = `dep_${Date.now()}`;
 
-    // Call Daraja STK Push
+    const { rate } = await getUsdToKesRate();
+    const kesAmount = convertUsdToKes(amount, rate);
+
+    // Call Daraja STK Push in KES (Safaricom M-Pesa operates in KES)
     const stkResponse = await initiateStkPush({
-      amount,
+      amount: kesAmount,
       phoneNumber: formattedPhone,
       accountReference: `TP-${user.id.slice(-6)}`,
-      transactionDesc: `TRADEPEDIA Deposit ${depositId.slice(-6)}`,
+      transactionDesc: `TRADEPEDIA $${amount.toFixed(2)} USD`,
     });
 
     try {
@@ -61,7 +65,7 @@ export async function POST(req: NextRequest) {
             userId: user.id,
             accountId: account.id,
             amount,
-            currency: "KES",
+            currency: "USD",
             phoneNumber: formattedPhone,
             status: DepositStatus.PENDING_CONFIRMATION,
             provider: "MPESA",
@@ -76,7 +80,9 @@ export async function POST(req: NextRequest) {
           entityType: "Deposit",
           entityId: deposit.id,
           metadata: {
-            amount,
+            amountUsd: amount,
+            kesAmount,
+            exchangeRate: rate,
             phoneNumber: formattedPhone,
             checkoutRequestId: stkResponse.checkoutRequestId,
           },
@@ -85,12 +91,15 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          message: "M-Pesa STK Push initiated. Please check your phone for the PIN prompt.",
+          message: `M-Pesa STK Push for KES ${kesAmount.toLocaleString()} ($${amount.toFixed(2)} USD) initiated. Please check your phone for the PIN prompt.`,
           data: {
             depositId: deposit.id,
             checkoutRequestId: deposit.checkoutRequestId,
             status: deposit.status,
             amount: deposit.amount.toString(),
+            amountUsd: amount,
+            kesAmount,
+            exchangeRate: rate,
           },
         });
       }
@@ -104,7 +113,9 @@ export async function POST(req: NextRequest) {
       userFullName: user.fullName,
       userEmail: user.email,
       amount: amount.toFixed(2),
-      currency: "KES",
+      currency: "USD",
+      kesAmount,
+      exchangeRate: rate,
       phoneNumber: formattedPhone,
       status: "PENDING_CONFIRMATION",
       merchantRequestId: stkResponse.merchantRequestId,
@@ -119,12 +130,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "M-Pesa STK Push initiated. Please check your phone for the PIN prompt.",
+      message: `M-Pesa STK Push for KES ${kesAmount.toLocaleString()} ($${amount.toFixed(2)} USD) initiated. Please check your phone for the PIN prompt.`,
       data: {
         depositId: memDeposit.id,
         checkoutRequestId: memDeposit.checkoutRequestId,
         status: memDeposit.status,
         amount: memDeposit.amount,
+        amountUsd: amount,
+        kesAmount,
+        exchangeRate: rate,
       },
     });
   } catch (error: any) {
