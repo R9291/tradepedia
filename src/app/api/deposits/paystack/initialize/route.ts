@@ -6,13 +6,13 @@ import {
   getPaystackPublicKey,
   getPaystackSecretKey,
 } from "@/lib/paystack";
-import { isSasaPayConfigured, initiateSasaPayMpesaStk } from "@/lib/sasapay";
 import { initiateStkPush } from "@/lib/mpesa";
+import { getUsdToKesRate, convertUsdToKes } from "@/lib/fx";
 import { demoStore } from "@/lib/memory-store";
 import { z } from "zod";
 
 const paystackInitSchema = z.object({
-  amount: z.number().min(100, "Minimum deposit is KES 100").max(500000),
+  amount: z.number().min(1, "Minimum deposit is $1.00 USD").max(10000, "Maximum single deposit is $10,000.00 USD"),
   phoneNumber: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { amount, phoneNumber, phone, email, mode } = validated.data;
+    const { amount, phoneNumber, phone, email, mode } = validated.data; // amount is in USD
     const customerPhone = phoneNumber || phone || rawUser?.phone || "";
     const customerEmail = email || rawUser?.email || "trader@tradepedia.co.ke";
 
@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
       kycStatus: "APPROVED" as const,
     };
 
+    const { rate } = await getUsdToKesRate();
+    const kesAmount = convertUsdToKes(amount, rate);
+
     const reference = `TP_PSK_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
     const depositId = `dep_${Date.now()}`;
 
@@ -60,13 +63,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // PRIMARY LIVE ROUTE: Safaricom Daraja production STK Push (Till / Buy Goods 1850445)
+      // PRIMARY LIVE ROUTE: Safaricom Daraja production STK Push (sends KES amount to phone)
       if ((process.env.MPESA_ENV || "sandbox").toLowerCase() === "production") {
         const darajaLive = await initiateStkPush({
-          amount,
+          amount: kesAmount,
           phoneNumber: customerPhone,
           accountReference: "TRADEPEDIA",
-          transactionDesc: "Account Deposit",
+          transactionDesc: `Deposit $${amount.toFixed(2)} USD`,
         });
 
         demoStore.deposits = demoStore.deposits || [];
@@ -76,7 +79,9 @@ export async function POST(req: NextRequest) {
           userFullName: user.fullName,
           userEmail: user.email,
           amount: amount.toFixed(2),
-          currency: "KES",
+          currency: "USD",
+          kesAmount,
+          exchangeRate: rate,
           phoneNumber: customerPhone,
           status: "PENDING_CONFIRMATION",
           provider: "MPESA",
@@ -93,53 +98,17 @@ export async function POST(req: NextRequest) {
             depositId,
             reference: darajaLive.checkoutRequestId,
             status: "pay_offline",
-            displayText: `M-Pesa prompt sent to ${customerPhone}. Enter your M-Pesa PIN, then tap "Confirm M-Pesa Payment Status Now".`,
+            displayText: `M-Pesa prompt for KES ${kesAmount.toLocaleString()} ($${amount.toFixed(2)} USD @ ${rate.toFixed(2)}) sent to ${customerPhone}. Enter your M-Pesa PIN, then tap "Check Now".`,
             amount,
+            amountUsd: amount,
+            kesAmount,
+            exchangeRate: rate,
           },
         });
       }
 
       const isLiveMode = process.env.DEMO_MODE === "false";
       const paystackKey = process.env.PAYSTACK_SECRET_KEY || "";
-
-      // PRIMARY LIVE ROUTE: Safaricom Daraja production STK Push (Till / Buy Goods or Paybill)
-      if ((process.env.MPESA_ENV || "sandbox").toLowerCase() === "production") {
-        const darajaLive = await initiateStkPush({
-          amount,
-          phoneNumber: customerPhone,
-          accountReference: "TRADEPEDIA",
-          transactionDesc: "Account Deposit",
-        });
-
-        demoStore.deposits = demoStore.deposits || [];
-        demoStore.deposits.unshift({
-          id: depositId,
-          userId: user.id,
-          userFullName: user.fullName,
-          userEmail: user.email,
-          amount: amount.toFixed(2),
-          currency: "KES",
-          phoneNumber: customerPhone,
-          status: "PENDING_CONFIRMATION",
-          provider: "MPESA",
-          checkoutRequestId: darajaLive.checkoutRequestId,
-          mpesaReceiptNumber: null,
-          initiatedAt: new Date(),
-          completedAt: null,
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: darajaLive.customerMessage,
-          data: {
-            depositId,
-            reference: darajaLive.checkoutRequestId,
-            status: "pay_offline",
-            displayText: `M-Pesa prompt sent to ${customerPhone}. Enter your M-Pesa PIN, then tap "Confirm M-Pesa Payment Status Now".`,
-            amount,
-          },
-        });
-      }
 
       // LIVE MODE: never route real deposits through sandbox/test gateways (no fake money in Real accounts)
       if (isLiveMode && !paystackKey.startsWith("sk_live_")) {
@@ -163,10 +132,10 @@ export async function POST(req: NextRequest) {
       // their real Kenyan Safaricom phone number, dispatch the live M-Pesa STK Push via Safaricom Daraja!
       if (secretKey.startsWith("sk_test_") && !isPaystackTestPhone) {
         const darajaStk = await initiateStkPush({
-          amount,
+          amount: kesAmount,
           phoneNumber: customerPhone,
           accountReference: "TRADEPEDIA",
-          transactionDesc: "Trading Account Deposit",
+          transactionDesc: `Deposit $${amount.toFixed(2)} USD`,
         });
 
         demoStore.deposits = demoStore.deposits || [];
@@ -176,7 +145,9 @@ export async function POST(req: NextRequest) {
           userFullName: user.fullName,
           userEmail: user.email,
           amount: amount.toFixed(2),
-          currency: "KES",
+          currency: "USD",
+          kesAmount,
+          exchangeRate: rate,
           phoneNumber: customerPhone,
           status: "PENDING_CONFIRMATION",
           provider: "MPESA",
@@ -188,13 +159,16 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          message: `M-Pesa STK Push sent to ${customerPhone}. Please enter your M-Pesa PIN on your phone.`,
+          message: `M-Pesa STK Push for KES ${kesAmount.toLocaleString()} ($${amount.toFixed(2)} USD) sent to ${customerPhone}. Please enter your M-Pesa PIN on your phone.`,
           data: {
             depositId,
             reference: darajaStk.checkoutRequestId,
             status: "pay_offline",
-            displayText: `M-Pesa STK Push prompt sent to ${customerPhone}. Enter your M-Pesa PIN on your phone, then click "Confirm M-Pesa Payment Status Now".`,
+            displayText: `M-Pesa STK Push prompt for KES ${kesAmount.toLocaleString()} ($${amount.toFixed(2)} USD @ ${rate.toFixed(2)}) sent to ${customerPhone}. Enter your M-Pesa PIN on your phone to approve.`,
             amount,
+            amountUsd: amount,
+            kesAmount,
+            exchangeRate: rate,
             publicKey: getPaystackPublicKey(),
           },
         });
@@ -202,7 +176,7 @@ export async function POST(req: NextRequest) {
 
       const stk = await initiatePaystackMpesaStk({
         email: customerEmail,
-        amountKes: amount,
+        amountKes: kesAmount,
         phone: customerPhone,
         reference,
       });
@@ -214,7 +188,9 @@ export async function POST(req: NextRequest) {
         userFullName: user.fullName,
         userEmail: user.email,
         amount: amount.toFixed(2),
-        currency: "KES",
+        currency: "USD",
+        kesAmount,
+        exchangeRate: rate,
         phoneNumber: customerPhone,
         status: "PENDING_CONFIRMATION",
         provider: "PAYSTACK",
@@ -233,6 +209,9 @@ export async function POST(req: NextRequest) {
           status: stk.status,
           displayText: stk.displayText,
           amount,
+          amountUsd: amount,
+          kesAmount,
+          exchangeRate: rate,
           publicKey: getPaystackPublicKey(),
         },
       });
@@ -240,7 +219,7 @@ export async function POST(req: NextRequest) {
 
     const initialized = await initializePaystackTransaction({
       email: customerEmail,
-      amountKes: amount,
+      amountKes: kesAmount,
       phone: customerPhone,
       reference,
     });
@@ -252,7 +231,9 @@ export async function POST(req: NextRequest) {
       userFullName: user.fullName,
       userEmail: user.email,
       amount: amount.toFixed(2),
-      currency: "KES",
+      currency: "USD",
+      kesAmount,
+      exchangeRate: rate,
       phoneNumber: customerPhone,
       status: "PENDING_CONFIRMATION",
       provider: "PAYSTACK",
@@ -271,6 +252,9 @@ export async function POST(req: NextRequest) {
         authorizationUrl: initialized.authorizationUrl,
         accessCode: initialized.accessCode,
         amount,
+        amountUsd: amount,
+        kesAmount,
+        exchangeRate: rate,
         publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "",
       },
     });
