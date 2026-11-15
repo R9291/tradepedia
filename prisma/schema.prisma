@@ -77,7 +77,7 @@ model Account {
   id               String        @id @default(cuid())
   userId           String
   user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  currency         String        @default("KES")
+  currency         String        @default("USD")
   availableBalance Decimal       @default(0) @db.Decimal(18, 2)
   lockedMargin     Decimal       @default(0) @db.Decimal(18, 2)
   equity           Decimal       @default(0) @db.Decimal(18, 2)
@@ -112,7 +112,7 @@ model Deposit {
   user               User           @relation(fields: [userId], references: [id])
   accountId          String
   amount             Decimal        @db.Decimal(18, 2)
-  currency           String         @default("KES")
+  currency           String         @default("USD")
   phoneNumber        String
   status             DepositStatus  @default(INITIATED)
   provider           String         @default("MPESA")
