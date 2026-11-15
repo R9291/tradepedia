@@ -245,13 +245,13 @@ export function Navbar() {
           <Link
             href="/deposit"
             className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 transition-all text-xs"
-            title="TRADEPEDIA Real Balance - Tap to Deposit"
+            title="TRADEPEDIA Real Balance (USD) - Tap to Deposit"
           >
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <div className="flex items-center gap-1 font-mono text-[11px] sm:text-xs">
               <span className="text-[9px] sm:text-[10px] text-emerald-400/80 uppercase font-semibold">Real:</span>
               <span className="font-bold text-emerald-300 whitespace-nowrap">
-                KES {realBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${realBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <span className="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase">
