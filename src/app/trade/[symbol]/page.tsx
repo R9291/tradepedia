@@ -51,6 +51,7 @@ import {
 import { DerivCandlestickChart } from "@/components/trading/DerivCandlestickChart";
 import { getMarketStatus } from "@/lib/market-hours";
 import { RiskCalculatorModal } from "@/components/trading/RiskCalculatorModal";
+import { DigitOptionsPanel } from "@/components/trading/DigitOptionsPanel";
 import { TechnicalAnalysisGauge } from "@/components/trading/TechnicalAnalysisGauge";
 import { PriceAlertsModal, PriceAlert } from "@/components/trading/PriceAlertsModal";
 
@@ -112,6 +113,15 @@ const AVAILABLE_ASSETS = [
   { symbol: "ETHUSD", name: "Ethereum / USD", category: "Crypto", basePrice: 2640.50, decimals: 2 },
   { symbol: "SOLUSD", name: "Solana / USD", category: "Crypto", basePrice: 178.40, decimals: 2 },
   { symbol: "XAUUSD", name: "Gold / USD", category: "Commodities", basePrice: 2724.80, decimals: 2 },
+  { symbol: "VOL_10", name: "Volatility 10 Index", category: "Derived", basePrice: 6540.123, decimals: 3 },
+  { symbol: "VOL_25", name: "Volatility 25 Index", category: "Derived", basePrice: 2410.456, decimals: 3 },
+  { symbol: "VOL_50", name: "Volatility 50 Index", category: "Derived", basePrice: 215.4321, decimals: 4 },
+  { symbol: "VOL_75", name: "Volatility 75 Index", category: "Derived", basePrice: 345120.4321, decimals: 4 },
+  { symbol: "VOL_10_1S", name: "Volatility 10 (1s) Index", category: "Derived", basePrice: 9240.15, decimals: 2 },
+  { symbol: "VOL_25_1S", name: "Volatility 25 (1s) Index", category: "Derived", basePrice: 4120.85, decimals: 2 },
+  { symbol: "VOL_50_1S", name: "Volatility 50 (1s) Index", category: "Derived", basePrice: 312.45, decimals: 2 },
+  { symbol: "VOL_75_1S", name: "Volatility 75 (1s) Index", category: "Derived", basePrice: 12450.60, decimals: 2 },
+  { symbol: "VOL_100_1S", name: "Volatility 100 (1s) Index", category: "Derived", basePrice: 2890.75, decimals: 2 },
   { symbol: "VOL_100", name: "Volatility 100 Index", category: "Synthetics", basePrice: 1850.40, decimals: 2 },
   { symbol: "BOOM_500", name: "Boom 500 Index", category: "Synthetics", basePrice: 4250.80, decimals: 2 },
   { symbol: "CRASH_500", name: "Crash 500 Index", category: "Synthetics", basePrice: 3180.20, decimals: 2 },
@@ -158,15 +168,15 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
   const [openTrades, setOpenTrades] = useState<OpenTrade[]>([]);
   const [closedTrades, setClosedTrades] = useState<any[]>([]);
   const [kycStatus, setKycStatus] = useState<string>("PENDING");
-  const [availableBalance, setAvailableBalance] = useState<string>("100000.00");
-  const [equity, setEquity] = useState<string>("100000.00");
+  const [availableBalance, setAvailableBalance] = useState<string>("10000.00");
+  const [equity, setEquity] = useState<string>("10000.00");
   const [accountType, setAccountType] = useState<"DEMO" | "REAL">("DEMO");
-  const [demoBalance, setDemoBalance] = useState<string>("100000.00");
+  const [demoBalance, setDemoBalance] = useState<string>("10000.00");
   const [realBalance, setRealBalance] = useState<string>("0.00");
 
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [customResetAmount, setCustomResetAmount] = useState<number>(100000);
+  const [customResetAmount, setCustomResetAmount] = useState<number>(10000);
 
   const switchAccount = (type: "DEMO" | "REAL") => {
     setAccountType(type);
@@ -193,7 +203,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
-  const [depositAmount, setDepositAmount] = useState<number>(100);
+  const [depositAmount, setDepositAmount] = useState<number>(10);
   const [depositPhone, setDepositPhone] = useState<string>("0712345678");
   const [depositing, setDepositing] = useState(false);
   const [resettingBalance, setResettingBalance] = useState(false);
@@ -292,7 +302,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
           }
 
           setKycStatus(sumData.data.compliance.kycStatus);
-          const demoBal = sumData.data.demoAccount?.availableBalance || "100000.00";
+          const demoBal = sumData.data.demoAccount?.availableBalance || "10000.00";
           const serverReal = parseFloat(sumData.data.realAccount?.availableBalance || "0");
           const localReal = parseFloat(
             (typeof window !== "undefined" && localStorage.getItem("tradepedia_real_balance")) || "0"
@@ -438,10 +448,10 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
               const lots = parseFloat(trade.lotSize);
               const isBuy = trade.direction === "BUY";
               const currentPrice = isBuy ? currentBid : currentAsk;
-              const contractMultiplier = symbol.includes("BTC") || symbol.includes("ETH") ? 1 : 100000;
+              const contractMultiplier = symbol.includes("BTC") || symbol.includes("ETH") ? 1 : 10000;
               const pipDifference = (currentPrice - entry) * (isBuy ? 1 : -1);
               const usdPnl = pipDifference * lots * contractMultiplier;
-              const kesPnl = (usdPnl * 129.5).toFixed(2);
+              const kesPnl = usdPnl.toFixed(2);
 
               return {
                 ...trade,
@@ -494,7 +504,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
             if (isWin) {
               playSound("win");
               setSuccessMsg(
-                `🎉 CONTRACT WON (+95.5%)! Payout of KES ${contract.payoutKes.toLocaleString()} credited to your balance.`
+                `🎉 CONTRACT WON (+95.5%)! Payout of $${contract.payoutKes.toLocaleString()} credited to your balance.`
               );
               // Credit balance
               setAvailableBalance((b) => (parseFloat(b) + contract.payoutKes).toFixed(2));
@@ -515,16 +525,16 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
   // Margin calculation
   const contractSize =
-    currentAsset.category === "Forex" ? 100000 : currentAsset.symbol === "XAUUSD" ? 100 : 1;
+    currentAsset.category === "Forex" ? 10000 : currentAsset.symbol === "XAUUSD" ? 100 : 1;
   const notionalUsd = (contractSize * lotSize * mid) / leverage;
-  const estimatedMarginKes = (notionalUsd * 129.5).toFixed(2);
+  const estimatedMarginKes = notionalUsd.toFixed(2);
 
   // Digital Options Potential Payout (95.5% Deriv Return)
   const optionsPayoutKes = Math.floor(optionsStakeKes * 1.955);
 
   const handleStakePreset = (stakeInKes: number) => {
     setStakePreset(stakeInKes);
-    const calculatedLots = (stakeInKes * leverage) / (contractSize * mid * 129.5);
+    const calculatedLots = (stakeInKes * leverage) / (contractSize * mid);
     setLotSize(parseFloat(Math.max(0.01, calculatedLots).toFixed(2)));
   };
 
@@ -551,9 +561,9 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
     // Live Broker Balance Check (TradingView Unfunded Prompt)
     if (accountType === "REAL" && parseFloat(realBalance) < parseFloat(estimatedMarginKes)) {
       setErrorMsg(
-        `Live Broker account has insufficient funds (Available: KES ${parseFloat(realBalance).toLocaleString(undefined, {
+        `Live Broker account has insufficient funds (Available: $${parseFloat(realBalance).toLocaleString(undefined, {
           minimumFractionDigits: 2,
-        })}, Required Margin: KES ${estimatedMarginKes}). Deposit via M-Pesa or switch to Paper Trading.`
+        })}, Required Margin: $${estimatedMarginKes}). Deposit via M-Pesa or switch to Paper Trading.`
       );
       setIsDepositModalOpen(true);
       return;
@@ -636,7 +646,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
       return;
     }
     if (optionsStakeKes < 50) {
-      setErrorMsg("Minimum contract stake is KES 50.00");
+      setErrorMsg("Minimum contract stake is $50.00");
       return;
     }
     if (parseFloat(availableBalance) < optionsStakeKes) {
@@ -690,7 +700,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
       if (isWithinDealCancellation) {
         setSuccessMsg(`✓ Deal Cancellation Exercised: 100% of stake refunded! Position closed risk-free.`);
       } else {
-        setSuccessMsg(`✓ Position liquidated. Realized PnL: KES ${data.data?.realizedPnL || "0.00"}`);
+        setSuccessMsg(`✓ Position liquidated. Realized PnL: $${data.data?.realizedPnL || "0.00"}`);
       }
       await loadAccountAndTrades(accountType);
     } catch (err: any) {
@@ -739,7 +749,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
       }
       setIsResetModalOpen(false);
       playSound("win");
-      setSuccessMsg(`✓ Paper Trading account reset to KES ${customAmount.toLocaleString()}.00`);
+      setSuccessMsg(`✓ Paper Trading account reset to $${customAmount.toLocaleString()}.00`);
       await loadAccountAndTrades("DEMO");
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -820,7 +830,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
           );
         }
         setSuccessMsg(
-          `✓ Payment to TRADEPEDIA Confirmed! KES ${depositAmount.toLocaleString()} credited to your Real Broker account (Receipt: ${data.data.receipt}).`
+          `✓ Payment to TRADEPEDIA Confirmed! $${depositAmount.toLocaleString()} USD credited to your Real Broker account (Receipt: ${data.data.receipt}).`
         );
         setPendingStkDepositId(null);
         setPendingStkCheckoutId(null);
@@ -897,8 +907,8 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
             const handler = win.PaystackPop.setup({
               key: serverPubKey,
               email: gatewayEmail || currentUser?.email || "trader@tradepedia.co.ke",
-              amount: Math.round(depositAmount * 100), // KES cents
-              currency: "KES",
+              amount: Math.round(depositAmount * 100), // $cents
+              currency: "USD",
               ref,
               channels: ["mobile_money", "card", "bank", "bank_transfer"],
               metadata: {
@@ -978,7 +988,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
             instance
               .run({
                 amount: depositAmount,
-                currency: "KES",
+                currency: "USD",
                 email: gatewayEmail,
                 phone_number: depositPhone,
                 api_ref: `TP_${Date.now()}`,
@@ -1009,7 +1019,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                   setAvailableBalance(newBal);
                   setEquity(newBal);
                 }
-                setSuccessMsg(`✓ IntaSend Payment Confirmed! KES ${depositAmount.toLocaleString()} credited to Real Broker account (Ref: ${mpesaRef}).`);
+                setSuccessMsg(`✓ IntaSend Payment Confirmed! $${depositAmount.toLocaleString()} USD credited to Real Broker account (Ref: ${mpesaRef}).`);
                 setIsDepositModalOpen(false);
                 await loadAccountAndTrades(accountType);
                 resolve();
@@ -1046,7 +1056,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
               public_key: flwPubKey,
               tx_ref: `TP_FLW_${Date.now()}`,
               amount: depositAmount,
-              currency: "KES",
+              currency: "USD",
               payment_options: "mpesa,card,banktransfer",
               customer: {
                 email: gatewayEmail,
@@ -1079,7 +1089,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                     setAvailableBalance(newBal);
                     setEquity(newBal);
                   }
-                  setSuccessMsg(`✓ Flutterwave Payment Confirmed! KES ${depositAmount.toLocaleString()} credited to Real Broker account (Ref: ${flwRef}).`);
+                  setSuccessMsg(`✓ Flutterwave Payment Confirmed! $${depositAmount.toLocaleString()} USD credited to Real Broker account (Ref: ${flwRef}).`);
                   setIsDepositModalOpen(false);
                   await loadAccountAndTrades(accountType);
                   resolve();
@@ -1120,7 +1130,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
         body: JSON.stringify({
           provider,
           amount: depositAmount,
-          currency: "KES",
+          currency: "USD",
           transactionId: `${provider}_${cleanCode}`,
           receiptNumber: cleanCode,
           phoneNumber: depositPhone,
@@ -1138,7 +1148,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
         setEquity(newBal);
       }
 
-      setSuccessMsg(`✓ Deposit of KES ${depositAmount.toLocaleString()} verified (${cleanCode}) & credited to your Real Broker account!`);
+      setSuccessMsg(`✓ Deposit of $${depositAmount.toLocaleString()} USD verified (${cleanCode}) & credited to your Real Broker account!`);
       setIsDepositModalOpen(false);
       setManualMpesaCode("");
       await loadAccountAndTrades(accountType);
@@ -1425,7 +1435,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
               >
                 {accountType === "REAL" ? "REAL" : "DEMO"}
               </span>
-              <span className="text-[9px] sm:text-[10px] text-slate-400 font-sans">KES</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-sans">USD</span>
               <span className="font-bold">
                 {activeAccountBalance.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
@@ -1752,9 +1762,9 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                   <div className="flex items-center justify-between">
                     <span className="font-bold flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      Live Broker Unfunded (KES 0.00)
+                      Live Broker Unfunded ($0.00)
                     </span>
-                    <span className="text-[10px] text-amber-400/80 font-mono">Min KES 100</span>
+                    <span className="text-[10px] text-amber-400/80 font-mono">Min $1.00 USD</span>
                   </div>
                   <p className="text-[11px] text-slate-300 leading-snug">
                     Deposit funds via IntaSend, Flutterwave, or M-Pesa to trade live, or switch to Paper Trading to practice risk-free.
@@ -1846,12 +1856,12 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                     </div>
                   )}
 
-                  {/* Quick KES Stake Presets */}
+                  {/* Quick $Stake Presets */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <label className="font-semibold text-slate-300">Quick Stake (KES)</label>
+                      <label className="font-semibold text-slate-300">Quick Stake (USD)</label>
                       <span className="text-[11px] text-[#ff5722] font-mono font-bold">
-                        KES {stakePreset.toLocaleString()}
+                        ${stakePreset.toLocaleString()}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-1">
@@ -1946,7 +1956,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                   <div className="p-2.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1 text-xs">
                     <div className="flex justify-between text-slate-400">
                       <span>Required Margin:</span>
-                      <span className="text-white font-mono font-bold">KES {estimatedMarginKes}</span>
+                      <span className="text-white font-mono font-bold">${estimatedMarginKes}</span>
                     </div>
                     <div className="flex justify-between text-slate-400 text-[11px]">
                       <span>Potential Payout:</span>
@@ -2017,14 +2027,14 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                     </div>
                   </div>
 
-                  {/* Stake in KES */}
+                  {/* Stake in $*/}
                   <div className="space-y-1">
                     <div className="flex justify-between items-center text-xs">
-                      <label className="font-semibold text-slate-300">Contract Stake (KES)</label>
-                      <span className="text-[10px] text-emerald-400 font-mono">Min KES 50</span>
+                      <label className="font-semibold text-slate-300">Contract Stake (USD)</label>
+                      <span className="text-[10px] text-emerald-400 font-mono">Min $50</span>
                     </div>
                     <div className="relative">
-                      <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">KES</span>
+                      <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">USD</span>
                       <input
                         type="number"
                         min={50}
@@ -2061,10 +2071,10 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                     </div>
                     <div className="flex justify-between text-slate-300 font-bold">
                       <span>Total Payout:</span>
-                      <span className="text-white font-mono text-sm">KES {optionsPayoutKes.toLocaleString()}</span>
+                      <span className="text-white font-mono text-sm">${optionsPayoutKes.toLocaleString()}</span>
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono">
-                      Net Profit: +KES {(optionsPayoutKes - optionsStakeKes).toLocaleString()}
+                      Net Profit: +${(optionsPayoutKes - optionsStakeKes).toLocaleString()}
                     </div>
                   </div>
 
@@ -2269,13 +2279,13 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
             <div>
               <span className="text-slate-500">Balance:</span>{" "}
               <span className="text-white font-bold">
-                KES {activeAccountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${activeAccountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div>
               <span className="text-slate-500">Equity:</span>{" "}
               <span className="text-white font-bold">
-                KES {activeAccountEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${activeAccountEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div>
@@ -2286,19 +2296,19 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                 }`}
               >
                 {totalOpenFloatingPnL >= 0 ? "+" : ""}
-                KES {totalOpenFloatingPnL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${totalOpenFloatingPnL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div>
               <span className="text-slate-500">Margin:</span>{" "}
               <span className="text-amber-400 font-bold">
-                KES {totalMarginLocked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${totalMarginLocked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div>
               <span className="text-slate-500">Free:</span>{" "}
               <span className="text-emerald-400 font-bold">
-                KES {availableMargin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${availableMargin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             {accountType === "DEMO" && (
@@ -2341,7 +2351,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                     <th className="pb-2 font-medium">Entry</th>
                     <th className="pb-2 font-medium">Current</th>
                     <th className="pb-2 font-medium">Margin Locked</th>
-                    <th className="pb-2 font-medium">Floating PnL (KES)</th>
+                    <th className="pb-2 font-medium">Floating PnL (USD)</th>
                     <th className="pb-2 text-right font-medium">Action</th>
                   </tr>
                 </thead>
@@ -2366,7 +2376,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                         <td className="py-2.5 text-slate-300">{t.entryPrice}</td>
                         <td className="py-2.5 text-slate-300">{t.currentPrice || mid}</td>
                         <td className="py-2.5 text-slate-400">
-                          KES {parseFloat(t.marginRequired).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          ${parseFloat(t.marginRequired).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                         <td className={`py-2.5 font-bold ${isProfit ? "text-[#089981]" : "text-[#f23645]"}`}>
                           {isProfit ? "+" : ""}
@@ -2485,8 +2495,8 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                         <td className={`py-2 font-bold ${isWinning ? "text-[#089981]" : "text-[#f23645]"}`}>
                           {mid}
                         </td>
-                        <td className="py-2 text-slate-400">KES {c.stakeKes.toLocaleString()}</td>
-                        <td className="py-2 text-emerald-400 font-bold">KES {c.payoutKes.toLocaleString()}</td>
+                        <td className="py-2 text-slate-400">${c.stakeKes.toLocaleString()}</td>
+                        <td className="py-2 text-emerald-400 font-bold">${c.payoutKes.toLocaleString()}</td>
                         <td className="py-2 text-right">
                           <span className="px-2 py-0.5 rounded bg-slate-800 text-white font-bold text-xs animate-pulse">
                             {c.remainingSeconds}s
@@ -2543,7 +2553,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                         <td className="py-2.5 text-slate-300">{t.entryPrice}</td>
                         <td className="py-2.5 text-slate-300">{t.exitPrice || "-"}</td>
                         <td className={`py-2.5 font-bold ${isProfit ? "text-[#089981]" : "text-[#f23645]"}`}>
-                          KES {parseFloat(t.pnl || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          ${parseFloat(t.pnl || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-2.5 text-right text-slate-500">
                           {t.closedAt ? new Date(t.closedAt).toLocaleTimeString() : "-"}
@@ -2573,7 +2583,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
               <div
                 className={`text-lg font-bold ${netPnLTotal >= 0 ? "text-[#089981]" : "text-[#f23645]"}`}
               >
-                KES {netPnLTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ${netPnLTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
             </div>
             <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
@@ -2880,7 +2890,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                     M-Pesa Express (STK Push)
                   </span>
                   <span className="text-[10px] font-mono bg-emerald-500/20 px-1.5 py-0.5 rounded">
-                    Instant KES Credit
+                    Instant USD Credit
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300">
@@ -2932,8 +2942,8 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center text-xs">
-                  <label className="font-semibold text-slate-300">Deposit Amount (KES)</label>
-                  <span className="text-[10px] text-emerald-400 font-mono">Min KES 100</span>
+                  <label className="font-semibold text-slate-300">Deposit Amount (USD)</label>
+                  <span className="text-[10px] text-emerald-400 font-mono">Min $1.00 USD</span>
                 </div>
                 <input
                   type="number"
@@ -2970,7 +2980,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                 <Zap className="w-4 h-4 fill-white" />
                 {depositing
                   ? "Sending M-Pesa STK Push..."
-                  : `Send M-Pesa STK Push (KES ${depositAmount.toLocaleString()})`}
+                  : `Send M-Pesa STK Push ($${depositAmount.toLocaleString()} USD)`}
               </button>
             </form>
               </>
@@ -3009,7 +3019,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-mono block">Real Balance Available</span>
                 <span className="text-xl font-black text-white font-mono">
-                  KES {parseFloat(realBalance || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ${parseFloat(realBalance || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
               <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
@@ -3032,13 +3042,13 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Withdrawal Amount (KES)
+                  Withdrawal Amount (USD)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">KES</span>
+                  <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">USD</span>
                   <input
                     type="number"
-                    min={100}
+                    min={1}
                     defaultValue={500}
                     className="w-full bg-slate-950 border border-white/[0.08] rounded-lg pl-12 pr-3 py-2 text-white font-mono"
                   />
@@ -3275,7 +3285,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                 <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/[0.06] font-mono text-xs">
                   <div>
                     <span className="text-[10px] text-slate-500">Balance:</span>
-                    <div className="font-bold text-white">KES {parseFloat(demoBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                    <div className="font-bold text-white">${parseFloat(demoBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500">Account ID:</span>
@@ -3338,7 +3348,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                 <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/[0.06] font-mono text-xs">
                   <div>
                     <span className="text-[10px] text-slate-500">Balance:</span>
-                    <div className="font-bold text-white">KES {parseFloat(realBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                    <div className="font-bold text-white">${parseFloat(realBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500">Clearing ID:</span>
@@ -3396,20 +3406,20 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
 
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-400">
-                Starting Paper Balance (KES)
+                Starting Paper Balance (USD)
               </label>
               <input
                 type="number"
                 min={1000}
                 step={5000}
                 value={customResetAmount}
-                onChange={(e) => setCustomResetAmount(parseFloat(e.target.value) || 100000)}
+                onChange={(e) => setCustomResetAmount(parseFloat(e.target.value) || 10000)}
                 className="w-full bg-slate-950 border border-white/[0.1] rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-[#ff5722]"
               />
 
               {/* TradingView Quick Presets */}
               <div className="grid grid-cols-5 gap-1.5 pt-1">
-                {[50000, 100000, 250000, 500000, 1000000].map((amt) => (
+                {[1000, 5000, 10000, 25000, 50000].map((amt) => (
                   <button
                     key={amt}
                     type="button"
@@ -3420,7 +3430,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                         : "bg-white/[0.02] text-slate-400 border-white/[0.06] hover:bg-white/[0.06]"
                     }`}
                   >
-                    {amt >= 1000000 ? "1M" : `${amt / 1000}k`}
+                    {amt >= 100000 ? "1M" : `${amt / 1000}k`}
                   </button>
                 ))}
               </div>
@@ -3441,7 +3451,7 @@ export default function DerivTraderPage({ params }: { params: { symbol: string }
                 className="px-5 py-2 rounded-xl bg-[#ff5722] hover:bg-[#f4511e] text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#ff5722]/30 transition-all disabled:opacity-50"
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${resettingBalance ? "animate-spin" : ""}`} />
-                {resettingBalance ? "Resetting..." : `Reset to KES ${customResetAmount.toLocaleString()}`}
+                {resettingBalance ? "Resetting..." : `Reset to $${customResetAmount.toLocaleString()} USD`}
               </button>
             </div>
           </div>
