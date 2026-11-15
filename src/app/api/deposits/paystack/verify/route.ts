@@ -3,6 +3,7 @@ import { getCurrentUserFromRequest } from "@/lib/auth";
 import { verifyPaystackTransaction } from "@/lib/paystack";
 import { verifySasaPayTransaction } from "@/lib/sasapay";
 import { queryStkPushStatus } from "@/lib/mpesa";
+import { getUsdToKesRate, convertKesToUsd } from "@/lib/fx";
 import { prisma } from "@/lib/prisma";
 import { demoStore } from "@/lib/memory-store";
 import { creditDeposit } from "@/lib/ledger";
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
           reference,
           receipt: existingMem.mpesaReceiptNumber,
           amount: parseFloat(existingMem.amount),
+          kesAmount: existingMem.kesAmount,
           newRealBalance: realAccDone?.availableBalance || existingMem.amount,
           status: "SUCCESSFUL",
         },
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let amount = 100;
+    let amount = 1; // USD amount to credit
     let receiptNumber = reference;
     let channel = "mobile_money";
 
@@ -155,7 +157,7 @@ export async function POST(req: NextRequest) {
       );
       amount = pendingDep
         ? parseFloat(pendingDep.amount)
-        : (body?.amount ? parseFloat(String(body.amount)) : 100);
+        : (body?.amount ? parseFloat(String(body.amount)) : 1);
       receiptNumber = `MP${reference.slice(-8).toUpperCase()}`;
     } else {
       // Verify live against Paystack API (GET https://api.paystack.co/transaction/verify/:reference)
@@ -177,7 +179,15 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      amount = verification.amountKes;
+      const pendingDep = (demoStore.deposits || []).find(
+        (d) => d.checkoutRequestId === reference
+      );
+      if (pendingDep) {
+        amount = parseFloat(pendingDep.amount);
+      } else {
+        const { rate } = await getUsdToKesRate();
+        amount = convertKesToUsd(verification.amountKes, rate);
+      }
       receiptNumber = verification.receiptNumber;
       channel = verification.channel;
     }
@@ -192,7 +202,7 @@ export async function POST(req: NextRequest) {
         realAccount = await prisma.account.create({
           data: {
             userId: user.id,
-            currency: "KES",
+            currency: "USD",
             availableBalance: new Prisma.Decimal("0.00"),
             lockedMargin: new Prisma.Decimal("0.00"),
             equity: new Prisma.Decimal("0.00"),
@@ -214,7 +224,7 @@ export async function POST(req: NextRequest) {
             userId: user.id,
             accountId: realAccount.id,
             amount,
-            currency: "KES",
+            currency: "USD",
             phoneNumber: user.phone || "254700000000",
             status: DepositStatus.SUCCESSFUL,
             provider: "PAYSTACK" as any,
@@ -229,7 +239,7 @@ export async function POST(req: NextRequest) {
           userId: user.id,
           amount,
           depositId: deposit.id,
-          description: `M-Pesa Express STK Deposit [${channel}] (${receiptNumber})`,
+          description: `M-Pesa Express STK Deposit [${channel}] (${receiptNumber}) - $${amount.toFixed(2)} USD`,
         });
 
         await createAuditLog({
@@ -237,15 +247,15 @@ export async function POST(req: NextRequest) {
           action: "MPESA_STK_DEPOSIT_CONFIRMED",
           entityType: "Deposit",
           entityId: deposit.id,
-          metadata: { reference, receiptNumber, amount, channel },
+          metadata: { reference, receiptNumber, amountUsd: amount, channel },
         });
       }
     } catch {
       // Fallback to in-memory store
     }
 
-    // 4. Credit in-memory Real Broker account
-    let memUser = demoStore.users.get(user.id) || demoStore.users.get(user.email);
+    // 4. Credit in-memory Real Broker account in USD
+    const memUser = demoStore.users.get(user.id) || demoStore.users.get(user.email);
     let newRealBalance = amount.toFixed(2);
 
     if (memUser) {
@@ -254,7 +264,7 @@ export async function POST(req: NextRequest) {
         realAcc = {
           id: `acc_real_${user.id}`,
           userId: user.id,
-          currency: "KES",
+          currency: "USD",
           availableBalance: "0.00",
           lockedMargin: "0.00",
           equity: "0.00",
@@ -266,6 +276,7 @@ export async function POST(req: NextRequest) {
 
       const currentAvail = parseFloat(realAcc.availableBalance || "0");
       newRealBalance = (currentAvail + amount).toFixed(2);
+      realAcc.currency = "USD";
       realAcc.availableBalance = newRealBalance;
       realAcc.equity = newRealBalance;
       realAcc.ledgerEntries = realAcc.ledgerEntries || [];
@@ -274,7 +285,7 @@ export async function POST(req: NextRequest) {
         type: "DEPOSIT",
         amount: amount.toFixed(2),
         balanceAfter: newRealBalance,
-        description: `M-Pesa Express STK Deposit (${receiptNumber})`,
+        description: `M-Pesa Express STK Deposit (${receiptNumber}) - $${amount.toFixed(2)} USD`,
         createdAt: new Date(),
       });
 
@@ -296,7 +307,7 @@ export async function POST(req: NextRequest) {
         userFullName: user.fullName,
         userEmail: user.email,
         amount: amount.toFixed(2),
-        currency: "KES",
+        currency: "USD",
         phoneNumber: user.phone || "",
         status: "SUCCESSFUL",
         provider: "MPESA",
@@ -309,11 +320,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Payment of KES ${amount.toLocaleString()} to TRADEPEDIA confirmed & credited to your Real Broker account!`,
+      message: `Payment of $${amount.toFixed(2)} USD to TRADEPEDIA confirmed & credited to your Real Broker account!`,
       data: {
         reference,
         receipt: receiptNumber,
         amount,
+        kesAmount: pendingDep?.kesAmount,
         newRealBalance,
         channel,
         status: "SUCCESSFUL",
