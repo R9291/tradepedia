@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     const queryResult = await queryStkPushStatus(deposit.checkoutRequestId);
 
     if (queryResult.resultCode === "0") {
-      // Confirmed on Safaricom: settle and credit
+      // Confirmed on Safaricom: settle and credit in USD
       const receipt = `NL${Date.now().toString().slice(-8)}KE`;
 
       if (!isMemoryDeposit) {
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
                 userId: deposit.userId,
                 amount: deposit.amount,
                 depositId: deposit.id,
-                description: `M-Pesa STK Push Deposit (Reconciled: ${receipt})`,
+                description: `M-Pesa STK Push Deposit (Reconciled: ${receipt}) - $${deposit.amount} USD`,
               },
               tx
             );
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
           realAcc = {
             id: `acc_real_${memUser.id}`,
             userId: memUser.id,
-            currency: "KES",
+            currency: "USD",
             availableBalance: "0.00",
             lockedMargin: "0.00",
             equity: "0.00",
@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
         }
         const amt = parseFloat(deposit.amount.toString());
         const newBal = (parseFloat(realAcc.availableBalance || "0") + amt).toFixed(2);
+        realAcc.currency = "USD";
         realAcc.availableBalance = newBal;
         realAcc.equity = newBal;
         realAcc.ledgerEntries = realAcc.ledgerEntries || [];
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest) {
           type: "DEPOSIT",
           amount: amt.toFixed(2),
           balanceAfter: newBal,
-          description: `M-Pesa STK Push Deposit (Reconciled: ${receipt})`,
+          description: `M-Pesa STK Push Deposit (Reconciled: ${receipt}) - $${amt.toFixed(2)} USD`,
           createdAt: new Date(),
         });
         demoStore.users.set(memUser.id, memUser);
@@ -139,12 +140,12 @@ export async function POST(req: NextRequest) {
         action: "MPESA_DEPOSIT_RECONCILED_SUCCESS",
         entityType: "Deposit",
         entityId: deposit.id,
-        metadata: { checkoutRequestId: deposit.checkoutRequestId, receipt },
+        metadata: { checkoutRequestId: deposit.checkoutRequestId, receipt, amountUsd: deposit.amount.toString() },
       });
 
       return NextResponse.json({
         success: true,
-        message: "Deposit reconciled and funds credited to available balance",
+        message: "Deposit reconciled and USD funds credited to available balance",
         data: { status: DepositStatus.SUCCESSFUL, mpesaReceiptNumber: receipt },
       });
     } else {
