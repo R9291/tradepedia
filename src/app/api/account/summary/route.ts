@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
               : null,
             account: {
               id: demoAcc.id,
-              currency: demoAcc.currency,
+              currency: "USD",
               availableBalance: demoAcc.availableBalance.toString(),
               lockedMargin: demoAcc.lockedMargin.toString(),
               equity: demoAcc.equity.toString(),
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
             },
             demoAccount: {
               id: demoAcc.id,
-              currency: demoAcc.currency,
+              currency: "USD",
               availableBalance: demoAcc.availableBalance.toString(),
               lockedMargin: demoAcc.lockedMargin.toString(),
               equity: demoAcc.equity.toString(),
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
             },
             realAccount: {
               id: realAcc ? realAcc.id : `acc_real_${user.id}`,
-              currency: realAcc ? realAcc.currency : "KES",
+              currency: "USD",
               availableBalance: !user.isGuest && realAcc ? realAcc.availableBalance.toString() : "0.00",
               lockedMargin: !user.isGuest && realAcc ? realAcc.lockedMargin.toString() : "0.00",
               equity: !user.isGuest && realAcc ? realAcc.equity.toString() : "0.00",
@@ -109,10 +109,10 @@ export async function GET(req: NextRequest) {
       demoAcc = {
         id: `acc_demo_${user.id}`,
         userId: user.id,
-        currency: "KES",
-        availableBalance: effectiveKyc === "APPROVED" ? "100000.00" : "0.00",
+        currency: "USD",
+        availableBalance: effectiveKyc === "APPROVED" ? "10000.00" : "0.00",
         lockedMargin: "0.00",
-        equity: effectiveKyc === "APPROVED" ? "100000.00" : "0.00",
+        equity: effectiveKyc === "APPROVED" ? "10000.00" : "0.00",
         isDemo: true,
         ledgerEntries: [],
       };
@@ -123,8 +123,8 @@ export async function GET(req: NextRequest) {
       realAcc = {
         id: `acc_real_${user.id}`,
         userId: user.id,
-        currency: "KES",
-        availableBalance: "0.00", // Initial real balance is strictly KES 0.00 until an actual M-Pesa deposit is confirmed
+        currency: "USD",
+        availableBalance: "0.00", // Initial real balance is strictly $0.00 USD until an actual M-Pesa deposit is confirmed
         lockedMargin: "0.00",
         equity: "0.00",
         isDemo: false,
