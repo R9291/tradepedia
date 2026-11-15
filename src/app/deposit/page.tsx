@@ -14,7 +14,6 @@ import {
   FileCheck,
   Zap,
   Wallet,
-  ShieldCheck,
   ArrowUpRight,
 } from "lucide-react";
 
@@ -22,7 +21,9 @@ export default function DepositPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [kycStatus, setKycStatus] = useState<string>("PENDING");
   const [phone, setPhone] = useState<string>("");
-  const [amount, setAmount] = useState<number>(100);
+  const [amount, setAmount] = useState<number>(10);
+  const [fxRate, setFxRate] = useState<number>(129.5);
+  const [fxSource, setFxSource] = useState<string>("live");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deposits, setDeposits] = useState<any[]>([]);
@@ -35,6 +36,8 @@ export default function DepositPage() {
     checkoutRequestId?: string;
     receipt?: string;
   }>({ status: "IDLE" });
+
+  const estimatedKes = Math.max(1, Math.round(amount * fxRate));
 
   // Tally balance helper: updates state, localStorage, and dispatches global event
   const tallyBalance = (addedAmount: number) => {
@@ -61,11 +64,20 @@ export default function DepositPage() {
         }
       }
 
-      const [meRes, depRes, summaryRes] = await Promise.all([
+      const [meRes, depRes, summaryRes, fxRes] = await Promise.all([
         fetch("/api/auth/me"),
         fetch("/api/deposits"),
         fetch("/api/account/summary"),
+        fetch("/api/fx/rate"),
       ]);
+
+      if (fxRes.ok) {
+        const fxData = await fxRes.json();
+        if (fxData?.data?.rate) {
+          setFxRate(Number(fxData.data.rate));
+          setFxSource(fxData.data.source || "live");
+        }
+      }
 
       if (meRes.ok) {
         const meData = await meRes.json();
@@ -116,7 +128,6 @@ export default function DepositPage() {
         if (saved) setRealBalance(parseFloat(saved));
       }
     };
-
     window.addEventListener("tradepedia_balance_updated", handleBalanceUpdate);
     window.addEventListener("storage", handleBalanceUpdate);
     return () => {
@@ -156,7 +167,7 @@ export default function DepositPage() {
           setDepositState({
             status: "SUCCESS",
             receipt: data.data.receipt,
-            message: `Payment of KES ${credited.toLocaleString()} to TRADEPEDIA confirmed! Receipt: ${data.data.receipt}. Your TRADEPEDIA Real Broker account balance has been credited.`,
+            message: `Payment of $${credited.toFixed(2)} USD to TRADEPEDIA confirmed! Receipt: ${data.data.receipt}. Your TRADEPEDIA Real Broker account balance has been credited in USD.`,
           });
           clearInterval(interval);
           loadData();
@@ -184,7 +195,7 @@ export default function DepositPage() {
     setSubmitting(true);
     setDepositState({
       status: "INITIATED",
-      message: "Sending M-Pesa Express STK Push prompt to your phone...",
+      message: `Converting $${amount.toFixed(2)} USD to KES ${estimatedKes.toLocaleString()} and sending M-Pesa Express STK Push prompt to your phone...`,
     });
 
     try {
@@ -216,7 +227,7 @@ export default function DepositPage() {
           setDepositState({
             status: "SUCCESS",
             receipt: vData.data.receipt,
-            message: `Payment of KES ${credited.toLocaleString()} to TRADEPEDIA confirmed! Receipt: ${vData.data.receipt}. Your TRADEPEDIA Real Broker account balance has been credited.`,
+            message: `Payment of $${credited.toFixed(2)} USD to TRADEPEDIA confirmed! Receipt: ${vData.data.receipt}. Your TRADEPEDIA Real Broker account balance has been credited in USD.`,
           });
           await loadData();
           return;
@@ -228,7 +239,7 @@ export default function DepositPage() {
         checkoutRequestId: ref,
         message:
           data.data?.displayText ||
-          "M-Pesa PIN prompt sent to your phone. Enter your PIN on your phone to approve — your balance will update automatically!",
+          `M-Pesa PIN prompt for KES ${estimatedKes.toLocaleString()} ($${amount.toFixed(2)} USD) sent to your phone. Enter your PIN to approve — your USD balance will update automatically!`,
       });
 
       await loadData();
@@ -261,7 +272,7 @@ export default function DepositPage() {
         setDepositState({
           status: "SUCCESS",
           receipt: data.data.receipt,
-          message: `Payment of KES ${credited.toLocaleString()} to TRADEPEDIA confirmed! Receipt: ${data.data.receipt}. Your TRADEPEDIA Real Broker account balance has been credited.`,
+          message: `Payment of $${credited.toFixed(2)} USD to TRADEPEDIA confirmed! Receipt: ${data.data.receipt}. Your TRADEPEDIA Real Broker account balance has been credited in USD.`,
         });
       }
       await loadData();
@@ -284,10 +295,10 @@ export default function DepositPage() {
       <div className="border-b border-slate-800 pb-4">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <ArrowDownCircle className="w-6 h-6 text-emerald-400" />
-          Deposit Trading Funds (M-Pesa Express)
+          Deposit Trading Funds (USD via M-Pesa Express)
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Deposit KES trading funds directly into your TRADEPEDIA Real Broker account via instant M-Pesa STK Push.
+          Enter your deposit in USD — M-Pesa automatically converts and prompts the exact KES amount on your phone, then credits your account in USD.
         </p>
       </div>
 
@@ -303,7 +314,7 @@ export default function DepositPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              KES {realBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${realBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-semibold text-emerald-400">USD</span>
             </div>
           </div>
         </div>
@@ -324,8 +335,6 @@ export default function DepositPage() {
           </Link>
         </div>
       </div>
-
-
 
       {/* Authentication Notice if Guest */}
       {!isAuthenticated && (
@@ -348,7 +357,7 @@ export default function DepositPage() {
             <span className="text-slate-200 font-semibold">Lipa Na M-Pesa Buy Goods Till: 1850445</span>
           </div>
           <span className="font-semibold text-slate-400 font-mono">
-            TRADEPEDIA Clearing
+            1 USD = {fxRate.toFixed(2)} KES ({fxSource})
           </span>
         </div>
 
@@ -414,19 +423,19 @@ export default function DepositPage() {
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="block text-xs font-semibold text-slate-300">
-                Deposit Amount (KES)
+                Deposit Amount (USD)
               </label>
-              <span className="text-[11px] text-emerald-400 font-mono">Min KES 100 &bull; Max KES 150,000</span>
+              <span className="text-[11px] text-emerald-400 font-mono">Min $1.00 &bull; Max $10,000.00</span>
             </div>
             <div className="relative">
               <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-500">
-                KES
+                USD
               </span>
               <input
                 type="number"
-                min={100}
-                max={150000}
-                step={50}
+                min={1}
+                max={10000}
+                step={1}
                 required
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))}
@@ -434,9 +443,17 @@ export default function DepositPage() {
               />
             </div>
 
+            {/* Automated USD -> KES Conversion Preview */}
+            <div className="mt-2 px-3 py-2 rounded-lg bg-slate-900/90 border border-emerald-500/20 flex items-center justify-between text-xs font-mono">
+              <span className="text-slate-400">M-Pesa STK Charge:</span>
+              <span className="text-emerald-400 font-bold">
+                KES {estimatedKes.toLocaleString()} &rarr; Credits ${Number(amount || 0).toFixed(2)} USD
+              </span>
+            </div>
+
             {/* Quick Amount Chips */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-2">
-              {[100, 250, 500, 1000, 2500, 5000].map((preset) => (
+              {[1, 5, 10, 50, 100, 500].map((preset) => (
                 <button
                   key={preset}
                   type="button"
@@ -447,7 +464,7 @@ export default function DepositPage() {
                       : "bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
-                  {preset}
+                  ${preset}
                 </button>
               ))}
             </div>
@@ -469,7 +486,7 @@ export default function DepositPage() {
               />
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              A Safaricom STK prompt will pop up on this phone. Enter your PIN to approve payment to TRADEPEDIA.
+              A Safaricom STK prompt for KES {estimatedKes.toLocaleString()} will pop up on this phone. Enter your PIN to credit ${Number(amount || 0).toFixed(2)} USD to TRADEPEDIA.
             </span>
           </div>
 
@@ -478,7 +495,9 @@ export default function DepositPage() {
             disabled={submitting || depositState.status === "WAITING_CALLBACK"}
             className="w-full py-3.5 rounded-lg bg-gradient-to-r from-[#ff5722] to-amber-500 hover:from-[#f4511e] hover:to-amber-400 text-white font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50 transition-all shadow-lg shadow-[#ff5722]/20"
           >
-            {submitting ? "Sending STK Prompt..." : `Initiate M-Pesa STK Push (KES ${amount.toLocaleString()})`}
+            {submitting
+              ? "Sending STK Prompt..."
+              : `Initiate M-Pesa STK Push (KES ${estimatedKes.toLocaleString()} / $${Number(amount || 0).toFixed(2)} USD)`}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
@@ -508,7 +527,7 @@ export default function DepositPage() {
               <thead className="bg-slate-950/60 text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="px-6 py-3">Timestamp</th>
-                  <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3">Amount (USD)</th>
                   <th className="px-6 py-3">Phone</th>
                   <th className="px-6 py-3">M-Pesa Receipt</th>
                   <th className="px-6 py-3">Status</th>
@@ -521,7 +540,12 @@ export default function DepositPage() {
                       {new Date(d.initiatedAt).toLocaleString()}
                     </td>
                     <td className="px-6 py-3 text-emerald-400 font-bold whitespace-nowrap">
-                      KES {parseFloat(d.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      ${parseFloat(d.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD
+                      {d.kesAmount ? (
+                        <span className="block text-[10px] text-slate-400 font-normal">
+                          (KES {Number(d.kesAmount).toLocaleString()})
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-6 py-3 text-slate-300">{d.phoneNumber}</td>
                     <td className="px-6 py-3 text-slate-300 font-semibold">
