@@ -3,8 +3,7 @@ import { getCurrentUserFromRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { depositInitiateSchema } from "@/lib/validations";
 import { formatKenyanPhoneNumber, initiateStkPush } from "@/lib/mpesa";
-import { createAuditLog } from "@/lib/audit";
-import { creditDeposit } from "@/lib/ledger";
+import { getUsdToKesRate, convertUsdToKes } from "@/lib/fx";
 import { demoStore } from "@/lib/memory-store";
 import { DepositStatus, Prisma } from "@prisma/client";
 
@@ -105,16 +104,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { amount, phoneNumber } = validated.data;
+    const { amount, phoneNumber } = validated.data; // amount in USD
     const formattedPhone = formatKenyanPhoneNumber(phoneNumber);
     const depositId = `dep_${Date.now()}`;
 
-    // Trigger live Safaricom Daraja STK Push prompt to phone
+    const { rate } = await getUsdToKesRate();
+    const kesAmount = convertUsdToKes(amount, rate);
+
+    // Trigger live Safaricom Daraja STK Push prompt to phone in KES
     const stkResponse = await initiateStkPush({
-      amount,
+      amount: kesAmount,
       phoneNumber: formattedPhone,
       accountReference: "TRADEPEDIA",
-      transactionDesc: "Real Trading Account Deposit",
+      transactionDesc: `Deposit $${amount.toFixed(2)} USD`,
     });
 
     // 1. Try Prisma DB (Record as PENDING_CONFIRMATION until Safaricom callback/reconcile confirms payment)
@@ -127,7 +129,7 @@ export async function POST(req: NextRequest) {
         realAccount = await prisma.account.create({
           data: {
             userId: user.id,
-            currency: "KES",
+            currency: "USD",
             availableBalance: new Prisma.Decimal("0.00"),
             lockedMargin: new Prisma.Decimal("0.00"),
             equity: new Prisma.Decimal("0.00"),
@@ -142,7 +144,7 @@ export async function POST(req: NextRequest) {
           userId: user.id,
           accountId: realAccount.id,
           amount,
-          currency: "KES",
+          currency: "USD",
           phoneNumber: formattedPhone,
           status: DepositStatus.PENDING_CONFIRMATION,
           provider: "MPESA",
@@ -161,7 +163,9 @@ export async function POST(req: NextRequest) {
       userFullName: user.fullName,
       userEmail: user.email,
       amount: amount.toFixed(2),
-      currency: "KES",
+      currency: "USD",
+      kesAmount,
+      exchangeRate: rate,
       phoneNumber: formattedPhone,
       status: "PENDING_CONFIRMATION",
       merchantRequestId: stkResponse.merchantRequestId,
@@ -173,12 +177,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `M-Pesa STK Push initiated to ${formattedPhone}. Please enter your M-Pesa PIN to complete the deposit.`,
+      message: `M-Pesa STK Push for KES ${kesAmount.toLocaleString()} ($${amount.toFixed(2)} USD) initiated to ${formattedPhone}. Please enter your M-Pesa PIN to complete the deposit.`,
       data: {
         depositId,
         checkoutRequestId: stkResponse.checkoutRequestId,
         status: "PENDING_CONFIRMATION",
         amount,
+        amountUsd: amount,
+        kesAmount,
+        exchangeRate: rate,
       },
     });
   } catch (err: any) {
