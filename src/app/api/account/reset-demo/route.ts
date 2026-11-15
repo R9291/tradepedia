@@ -10,10 +10,10 @@ export async function POST(req: NextRequest) {
     const authUser = await getCurrentUserFromRequest(req);
     const user = authUser || { id: "demo_trader_ke", email: "trader@tradepedia.co.ke" };
 
-    let resetAmount = "100000.00"; // default KES 100,000
+    let resetAmount = "10000.00"; // default $10,000.00 USD
     try {
       const body = await req.json();
-      if (body?.amount && typeof body.amount === "number" && body.amount >= 1000) {
+      if (body?.amount && typeof body.amount === "number" && body.amount >= 100) {
         resetAmount = body.amount.toFixed(2);
       }
     } catch {}
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
               balanceAfter: new Prisma.Decimal(resetAmount),
               referenceType: "DEMO_RESET",
               referenceId: `rst_${Date.now()}`,
-              description: `Demo Paper Balance Reset to KES ${parseFloat(resetAmount).toLocaleString()}`,
+              description: `Demo Paper Balance Reset to $${parseFloat(resetAmount).toLocaleString()} USD`,
             },
           });
         });
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         type: "DEPOSIT",
         amount: resetAmount,
         balanceAfter: resetAmount,
-        description: `Demo Paper Balance Reset to KES ${parseFloat(resetAmount).toLocaleString()}`,
+        description: `Demo Paper Balance Reset to $${parseFloat(resetAmount).toLocaleString()} USD`,
         createdAt: new Date(),
       });
       demoStore.users.set(user.id, memUser);
@@ -85,13 +85,13 @@ export async function POST(req: NextRequest) {
       action: "DEMO_BALANCE_RESET",
       entityType: "Account",
       entityId: user.id,
-      metadata: { amount: resetAmount },
+      metadata: { amount: resetAmount, currency: "USD" },
       ipAddress: req.ip || req.headers.get("x-forwarded-for") || undefined,
     });
 
     return NextResponse.json({
       success: true,
-      message: "Demo paper balance successfully reset to KES 100,000.00",
+      message: `Demo paper balance successfully reset to $${parseFloat(resetAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD`,
       data: {
         availableBalance: resetAmount,
         equity: resetAmount,
