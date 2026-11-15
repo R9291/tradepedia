@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { creditDeposit } from "@/lib/ledger";
 import { createAuditLog } from "@/lib/audit";
+import { getUsdToKesRate, convertKesToUsd } from "@/lib/fx";
 import { DepositStatus } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
@@ -44,18 +45,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ResultCode: 0, ResultDesc: "Accepted" });
     }
 
-    // 3. Extract metadata fields if payment succeeded
+    // 3. Extract metadata fields if payment succeeded (Safaricom sends Amount in KES)
     let mpesaReceiptNumber: string | null = null;
-    let paidAmount = deposit.amount;
+    let paidKesAmount: number | null = null;
 
     if (CallbackMetadata?.Item && Array.isArray(CallbackMetadata.Item)) {
       for (const item of CallbackMetadata.Item) {
         if (item.Name === "MpesaReceiptNumber") {
           mpesaReceiptNumber = item.Value?.toString() || null;
         } else if (item.Name === "Amount" && item.Value) {
-          paidAmount = item.Value;
+          paidKesAmount = Number(item.Value);
         }
       }
+    }
+
+    // Determine USD amount to credit
+    let creditUsdAmount = deposit.amount;
+    if (deposit.currency !== "USD" && paidKesAmount && Number.isFinite(paidKesAmount)) {
+      const { rate } = await getUsdToKesRate();
+      creditUsdAmount = convertKesToUsd(paidKesAmount, rate) as any;
     }
 
     // 4. Handle Successful Payment (ResultCode == 0)
@@ -72,14 +80,14 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Atomically credit trading account and create immutable LedgerEntry
+        // Atomically credit trading account in USD and create immutable LedgerEntry
         await creditDeposit(
           {
             accountId: deposit.accountId,
             userId: deposit.userId,
-            amount: paidAmount,
+            amount: creditUsdAmount,
             depositId: deposit.id,
-            description: `M-Pesa STK Push Deposit (Receipt: ${mpesaReceiptNumber || "N/A"})`,
+            description: `M-Pesa STK Push Deposit (Receipt: ${mpesaReceiptNumber || "N/A"}${paidKesAmount ? `, Paid KES ${paidKesAmount}` : ""})`,
           },
           tx
         );
@@ -91,13 +99,14 @@ export async function POST(req: NextRequest) {
         entityType: "Deposit",
         entityId: deposit.id,
         metadata: {
-          amount: paidAmount.toString(),
+          amountUsd: creditUsdAmount.toString(),
+          paidKesAmount,
           mpesaReceiptNumber,
           checkoutRequestId: CheckoutRequestID,
         },
       });
 
-      console.log(`Successfully credited deposit ${deposit.id} (KES ${paidAmount})`);
+      console.log(`Successfully credited deposit ${deposit.id} ($${creditUsdAmount} USD)`);
     } else {
       // 5. Handle Payment Failure or Cancellation (ResultCode != 0)
       const failedStatus =
