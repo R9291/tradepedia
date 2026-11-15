@@ -1,6 +1,7 @@
 import { Prisma, TradeDirection, TradeStatus, LedgerEntryType } from "@prisma/client";
 import { prisma as defaultPrisma } from "./prisma";
 import { demoStore, DemoTrade } from "./memory-store";
+import { getDerivLiveTick } from "./deriv-feed";
 
 // Default currency conversion: USD to KES
 export const USD_TO_KES_RATE = new Prisma.Decimal("129.50");
@@ -17,8 +18,8 @@ export interface ForexQuote {
   timestamp: string;
 }
 
-// In-memory live quotes base rates (Forex, Crypto, Commodities)
-const BASE_MARKET_RATES: Record<string, { mid: number; pipSize: number; spread: number; contractSize: number; maxLeverage: number; decimals: number }> = {
+// In-memory live quotes base rates (Forex, Crypto, Commodities, Deriv Volatility Indices)
+const BASE_MARKET_RATES: Record<string, { mid: number; pipSize: number; spread: number; contractSize: number; maxLeverage: number; decimals: number; volScale?: number }> = {
   EURUSD: { mid: 1.08420, pipSize: 0.0001, spread: 1.5, contractSize: 100000, maxLeverage: 500, decimals: 5 },
   GBPUSD: { mid: 1.29820, pipSize: 0.0001, spread: 2.0, contractSize: 100000, maxLeverage: 500, decimals: 5 },
   USDJPY: { mid: 152.450, pipSize: 0.01, spread: 2.0, contractSize: 100000, maxLeverage: 500, decimals: 3 },
@@ -30,7 +31,16 @@ const BASE_MARKET_RATES: Record<string, { mid: number; pipSize: number; spread: 
   SOLUSD: { mid: 178.40, pipSize: 0.01, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2 },
   XAUUSD: { mid: 2724.80, pipSize: 0.1, spread: 1.5, contractSize: 100, maxLeverage: 500, decimals: 2 },
   USDKES: { mid: 129.50, pipSize: 0.01, spread: 1.0, contractSize: 100000, maxLeverage: 500, decimals: 2 },
-  VOL_100: { mid: 1850.40, pipSize: 0.1, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2 },
+  VOL_10: { mid: 6540.123, pipSize: 0.001, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 3, volScale: 0.10 },
+  VOL_25: { mid: 2410.456, pipSize: 0.001, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 3, volScale: 0.25 },
+  VOL_50: { mid: 215.4321, pipSize: 0.0001, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 4, volScale: 0.50 },
+  VOL_75: { mid: 345120.4321, pipSize: 0.0001, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 4, volScale: 0.75 },
+  VOL_100: { mid: 1850.40, pipSize: 0.01, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2, volScale: 1.00 },
+  VOL_10_1S: { mid: 9240.15, pipSize: 0.01, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2, volScale: 0.10 },
+  VOL_25_1S: { mid: 4120.85, pipSize: 0.01, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2, volScale: 0.25 },
+  VOL_50_1S: { mid: 312.45, pipSize: 0.01, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2, volScale: 0.50 },
+  VOL_75_1S: { mid: 12450.60, pipSize: 0.01, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2, volScale: 0.75 },
+  VOL_100_1S: { mid: 2890.75, pipSize: 0.01, spread: 1.0, contractSize: 1, maxLeverage: 500, decimals: 2, volScale: 1.00 },
   BOOM_500: { mid: 4250.80, pipSize: 0.1, spread: 1.2, contractSize: 1, maxLeverage: 500, decimals: 2 },
   CRASH_500: { mid: 3180.20, pipSize: 0.1, spread: 1.2, contractSize: 1, maxLeverage: 500, decimals: 2 },
 };
@@ -39,11 +49,32 @@ const BASE_MARKET_RATES: Record<string, { mid: number; pipSize: number; spread: 
 const LIVE_MARKET_STATE: Record<string, { currentMid: number; lastUpdate: number; velocity: number }> = {};
 
 /**
- * Returns live simulated price ticks with realistic financial Brownian motion.
+ * Returns live price ticks: uses live Deriv WebSocket ticks for Volatility Indices when available,
+ * and falls back to calibrated Brownian motion matching each symbol's volatility.
  */
 export function getLiveQuote(symbol: string): ForexQuote {
   const sym = symbol.toUpperCase();
   const base = BASE_MARKET_RATES[sym] || BASE_MARKET_RATES.EURUSD;
+  const decimals = base.decimals ?? (sym.includes("JPY") ? 3 : 5);
+  const halfSpread = (base.spread * base.pipSize) / 2;
+
+  // Prefer live Deriv WebSocket tick for Volatility Indices
+  const derivTick = getDerivLiveTick(sym);
+  if (derivTick) {
+    const liveMid = derivTick.quote;
+    return {
+      symbol: sym,
+      bid: new Prisma.Decimal((liveMid - halfSpread).toFixed(decimals)),
+      ask: new Prisma.Decimal((liveMid + halfSpread).toFixed(decimals)),
+      mid: new Prisma.Decimal(liveMid.toFixed(decimals)),
+      spreadPips: base.spread,
+      pipSize: new Prisma.Decimal(base.pipSize.toString()),
+      contractSize: new Prisma.Decimal(base.contractSize.toString()),
+      maxLeverage: base.maxLeverage,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const now = Date.now();
 
   if (!LIVE_MARKET_STATE[sym]) {
@@ -59,8 +90,9 @@ export function getLiveQuote(symbol: string): ForexQuote {
   state.lastUpdate = now;
 
   if (dt > 0.1) {
-    // Volatility parameter
-    const vol = base.pipSize * (base.mid > 1000 ? 1.5 : 0.4);
+    // Volatility parameter (calibrated by volScale for Deriv indices)
+    const volMultiplier = base.volScale ? base.volScale * 2.5 : 1;
+    const vol = base.pipSize * (base.mid > 1000 ? 1.5 : 0.4) * volMultiplier;
     // Mean reversion force towards base rate
     const meanReversion = (base.mid - state.currentMid) * 0.05;
     // Micro momentum + random Gaussian shock
@@ -68,9 +100,6 @@ export function getLiveQuote(symbol: string): ForexQuote {
     state.velocity = state.velocity * 0.7 + shock * 0.3;
     state.currentMid = Math.max(0.0001, state.currentMid + state.velocity + meanReversion * dt);
   }
-
-  const halfSpread = (base.spread * base.pipSize) / 2;
-  const decimals = base.decimals ?? (sym.includes("JPY") ? 3 : 5);
 
   const bid = new Prisma.Decimal((state.currentMid - halfSpread).toFixed(decimals));
   const ask = new Prisma.Decimal((state.currentMid + halfSpread).toFixed(decimals));
