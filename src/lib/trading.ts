@@ -102,8 +102,7 @@ export function calculateRequiredMargin(
 ): Prisma.Decimal {
   const notional = contractSize.times(lotSize).times(entryPrice);
   const marginUsd = notional.dividedBy(maxLeverage);
-  const marginKes = marginUsd.times(USD_TO_KES_RATE);
-  return marginKes.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  return marginUsd.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
 }
 
 export function calculatePnL(
@@ -209,10 +208,10 @@ export async function executeOpenTrade(
     symbol
   );
 
-  const availableBalance = new Prisma.Decimal(account?.availableBalance?.toString() || "100000");
+  const availableBalance = new Prisma.Decimal(account?.availableBalance?.toString() || "10000");
   if (availableBalance.lessThan(requiredMargin)) {
     throw new Error(
-      `Insufficient available balance. Required Margin: KES ${requiredMargin.toFixed(2)}, Available: KES ${availableBalance.toFixed(2)}`
+      `Insufficient available balance. Required Margin: $${requiredMargin.toFixed(2)}, Available: $${availableBalance.toFixed(2)}`
     );
   }
 
@@ -341,7 +340,7 @@ export async function executeCloseTrade(
     if (trade && trade.status === TradeStatus.OPEN) {
       const quote = getLiveQuote(trade.instrument.symbol);
       const exitPrice = trade.direction === TradeDirection.BUY ? quote.bid : quote.ask;
-      const { pnlKes } = calculatePnL(
+      const { pnlUsd } = calculatePnL(
         trade.direction,
         trade.entryPrice,
         exitPrice,
@@ -354,9 +353,9 @@ export async function executeCloseTrade(
         const releasedMargin = trade.marginRequired;
         const account = await tx.account.findUniqueOrThrow({ where: { id: trade.accountId } });
 
-        const newAvailable = account.availableBalance.add(releasedMargin).add(pnlKes);
+        const newAvailable = account.availableBalance.add(releasedMargin).add(pnlUsd);
         const newLocked = account.lockedMargin.minus(releasedMargin);
-        const newEquity = account.equity.add(pnlKes);
+        const newEquity = account.equity.add(pnlUsd);
 
         const updatedAccount = await tx.account.update({
           where: { id: account.id },
@@ -369,7 +368,7 @@ export async function executeCloseTrade(
 
         const updatedTrade = await tx.trade.update({
           where: { id: trade.id },
-          data: { exitPrice, pnl: pnlKes, status: TradeStatus.CLOSED, closedAt: new Date() },
+          data: { exitPrice, pnl: pnlUsd, status: TradeStatus.CLOSED, closedAt: new Date() },
         });
 
         return { trade: updatedTrade, account: updatedAccount };
@@ -389,7 +388,7 @@ export async function executeCloseTrade(
 
   const quote = getLiveQuote(dTrade.symbol);
   const exitPrice = dTrade.direction === "BUY" ? quote.bid : quote.ask;
-  const { pnlKes } = calculatePnL(
+  const { pnlUsd } = calculatePnL(
     dTrade.direction as TradeDirection,
     new Prisma.Decimal(dTrade.entryPrice),
     exitPrice,
@@ -400,7 +399,7 @@ export async function executeCloseTrade(
 
   dTrade.status = "CLOSED";
   dTrade.exitPrice = exitPrice.toString();
-  dTrade.pnl = pnlKes.toString();
+  dTrade.pnl = pnlUsd.toString();
   dTrade.closedAt = new Date();
 
   const memUser = demoStore.users.get(userId);
@@ -409,7 +408,7 @@ export async function executeCloseTrade(
   if (memUser && memUser.accounts.length > 0) {
     updatedAcc = memUser.accounts.find((a) => a.isDemo === isTradeDemo) || memUser.accounts[0];
     const released = new Prisma.Decimal(dTrade.marginRequired);
-    const newAvail = new Prisma.Decimal(updatedAcc.availableBalance).add(released).add(pnlKes);
+    const newAvail = new Prisma.Decimal(updatedAcc.availableBalance).add(released).add(pnlUsd);
     const newLock = new Prisma.Decimal(updatedAcc.lockedMargin).minus(released);
     updatedAcc.availableBalance = newAvail.toFixed(2);
     updatedAcc.lockedMargin = newLock.lessThan(0) ? "0.00" : newLock.toFixed(2);
@@ -420,7 +419,7 @@ export async function executeCloseTrade(
   return {
     trade: dTrade,
     account: {
-      availableBalance: fallbackAcc ? new Prisma.Decimal(fallbackAcc.availableBalance) : pnlKes,
+      availableBalance: fallbackAcc ? new Prisma.Decimal(fallbackAcc.availableBalance) : pnlUsd,
       lockedMargin: fallbackAcc ? new Prisma.Decimal(fallbackAcc.lockedMargin) : new Prisma.Decimal("0.00"),
     },
   };
