@@ -72,15 +72,15 @@ export async function POST(req: NextRequest) {
           data: [
             {
               userId: newUser.id,
-              currency: "KES",
-              availableBalance: 100000,
+              currency: "USD",
+              availableBalance: 10000,
               lockedMargin: 0,
-              equity: 100000,
+              equity: 10000,
               isDemo: true,
             },
             {
               userId: newUser.id,
-              currency: "KES",
+              currency: "USD",
               availableBalance: 0,
               lockedMargin: 0,
               equity: 0,
@@ -123,18 +123,18 @@ export async function POST(req: NextRequest) {
           {
             id: `acc_demo_${userId}`,
             userId,
-            currency: "KES",
-            availableBalance: "100000.00",
+            currency: "USD",
+            availableBalance: "10000.00",
             lockedMargin: "0.00",
-            equity: "100000.00",
+            equity: "10000.00",
             isDemo: true,
             ledgerEntries: [
               {
                 id: `led_init_${userId}`,
                 type: "DEPOSIT",
-                amount: "100000.00",
-                balanceAfter: "100000.00",
-                description: "Initial Paper Trading virtual liquidity",
+                amount: "10000.00",
+                balanceAfter: "10000.00",
+                description: "Initial Paper Trading virtual liquidity ($10,000.00 USD)",
                 createdAt: new Date(),
               },
             ],
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
           {
             id: `acc_real_${userId}`,
             userId,
-            currency: "KES",
+            currency: "USD",
             availableBalance: "0.00",
             lockedMargin: "0.00",
             equity: "0.00",
