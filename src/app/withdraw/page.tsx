@@ -4,16 +4,11 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Wallet,
-  ArrowUpRight,
   Smartphone,
   CheckCircle2,
-  Clock,
   Zap,
-  ArrowRight,
   RefreshCw,
   FileCheck,
-  Building2,
-  ShieldCheck,
 } from "lucide-react";
 
 interface WithdrawalRecord {
@@ -28,7 +23,7 @@ interface WithdrawalRecord {
 export default function WithdrawPage() {
   const [realBalance, setRealBalance] = useState<number>(0);
   const [phone, setPhone] = useState<string>("");
-  const [amount, setAmount] = useState<number>(500);
+  const [amount, setAmount] = useState<number>(10);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [history, setHistory] = useState<WithdrawalRecord[]>([]);
   const [withdrawalState, setWithdrawalState] = useState<{
@@ -78,7 +73,7 @@ export default function WithdrawPage() {
 
   const handleWithdrawal = (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount < 100) return;
+    if (amount < 1) return;
 
     setSubmitting(true);
     setWithdrawalState({
@@ -106,15 +101,15 @@ export default function WithdrawPage() {
       setWithdrawalState({
         status: "COMPLETED",
         receipt,
-        message: `M-Pesa B2C Payout of KES ${amount.toLocaleString()}.00 successfully dispatched to ${phone || "your M-Pesa line"}. (Receipt: ${receipt}).`,
+        message: `M-Pesa B2C Payout of $${amount.toFixed(2)} USD successfully dispatched to ${phone || "your M-Pesa line"}. (Receipt: ${receipt}).`,
       });
       setSubmitting(false);
     }, 1500);
   };
 
   const setPercentage = (pct: number) => {
-    const target = realBalance > 0 ? realBalance : 1000;
-    const val = Math.max(100, Math.floor((target * pct) / 100));
+    const target = realBalance > 0 ? realBalance : 100;
+    const val = Math.max(1, Math.floor((target * pct) / 100));
     setAmount(val);
   };
 
@@ -125,7 +120,7 @@ export default function WithdrawPage() {
         <div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
             <Wallet className="w-7 h-7 text-[#ff5722]" />
-            Withdraw Trading Funds (M-Pesa B2C)
+            Withdraw Trading Funds (USD via M-Pesa B2C)
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Fast, automated cash disbursements directly to your registered Safaricom M-Pesa mobile number.
@@ -150,11 +145,11 @@ export default function WithdrawPage() {
           </div>
           <div>
             <div className="text-[11px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
-              <span>Withdrawable Cash Balance</span>
+              <span>Withdrawable Cash Balance (USD)</span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              KES {realBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${realBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
@@ -234,19 +229,19 @@ export default function WithdrawPage() {
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="block text-xs font-semibold text-slate-300">
-                Withdrawal Amount (KES)
+                Withdrawal Amount (USD)
               </label>
-              <span className="text-[11px] text-emerald-400 font-mono">Min KES 100 &bull; Max KES 150,000</span>
+              <span className="text-[11px] text-emerald-400 font-mono">Min $1.00 &bull; Max $10,000.00</span>
             </div>
             <div className="relative">
               <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-500">
-                KES
+                USD
               </span>
               <input
                 type="number"
-                min={100}
-                max={150000}
-                step={50}
+                min={1}
+                max={10000}
+                step={1}
                 required
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))}
@@ -273,11 +268,11 @@ export default function WithdrawPage() {
           <div className="p-3.5 rounded-xl bg-slate-950 border border-white/[0.06] space-y-2 text-xs font-mono">
             <div className="flex justify-between text-slate-400">
               <span>Requested Amount:</span>
-              <span className="text-white font-bold">KES {amount.toLocaleString()}.00</span>
+              <span className="text-white font-bold">${amount.toLocaleString()}.00</span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Safaricom B2C Network Fee:</span>
-              <span className="text-emerald-400 font-bold">KES 0.00 (Zero Fee)</span>
+              <span className="text-emerald-400 font-bold">$0.00 (Zero Fee)</span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Settlement Speed:</span>
@@ -285,7 +280,7 @@ export default function WithdrawPage() {
             </div>
             <div className="flex justify-between text-slate-200 pt-1 border-t border-white/[0.06] font-bold">
               <span>Net Payout:</span>
-              <span className="text-emerald-400 text-sm">KES {amount.toLocaleString()}.00</span>
+              <span className="text-emerald-400 text-sm">${amount.toLocaleString()}.00</span>
             </div>
           </div>
 
@@ -303,7 +298,7 @@ export default function WithdrawPage() {
             ) : (
               <>
                 <Wallet className="w-4 h-4" />
-                Withdraw Funds to M-Pesa (KES {amount.toLocaleString()})
+                Withdraw Funds to M-Pesa (${amount.toLocaleString()})
               </>
             )}
           </button>
@@ -330,7 +325,7 @@ export default function WithdrawPage() {
               <thead className="bg-slate-950/60 text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="px-6 py-3">Timestamp</th>
-                  <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3">Amount (USD)</th>
                   <th className="px-6 py-3">Phone</th>
                   <th className="px-6 py-3">M-Pesa Receipt</th>
                   <th className="px-6 py-3">Status</th>
@@ -343,7 +338,7 @@ export default function WithdrawPage() {
                       {item.timestamp}
                     </td>
                     <td className="px-6 py-3 text-emerald-400 font-bold whitespace-nowrap">
-                      KES {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-6 py-3 text-slate-300">{item.phone}</td>
                     <td className="px-6 py-3 text-slate-300 font-semibold">{item.receiptNumber}</td>
